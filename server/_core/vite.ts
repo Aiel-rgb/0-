@@ -10,9 +10,12 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 
 export async function setupVite(app: Express, server: Server) {
-  // Dynamic import only in dev
-  const { createServer: createViteServer } = await import("vite");
-  const viteConfig = (await import("../../vite.config")).default;
+  // Dynamic import only in dev - use variables to prevent esbuild from bundling
+  const viteModuleName = "vite";
+  const { createServer: createViteServer } = await import(viteModuleName);
+
+  const viteConfigName = "../../vite.config";
+  const viteConfig = (await import(viteConfigName)).default;
 
   const serverOptions = {
     middlewareMode: true,

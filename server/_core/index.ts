@@ -29,6 +29,9 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 
 async function startServer() {
   console.log("Starting server process...");
+  console.log("[Debug] Env keys available:", Object.keys(process.env).filter(k => !k.includes("KEY") && !k.includes("SECRET") && !k.includes("PASS")));
+  console.log("[Debug] OAUTH_SERVER_URL present:", !!process.env.OAUTH_SERVER_URL);
+
   const app = express();
 
   // Health check endpoint for Railway

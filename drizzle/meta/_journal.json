@@ -1,0 +1,48 @@
+{
+  "version": "7",
+  "dialect": "mysql",
+  "entries": [
+    {
+      "idx": 0,
+      "version": "5",
+      "when": 1770677314799,
+      "tag": "0000_violet_patriot",
+      "breakpoints": true
+    },
+    {
+      "idx": 1,
+      "version": "5",
+      "when": 1770677354403,
+      "tag": "0001_overrated_hellion",
+      "breakpoints": true
+    },
+    {
+      "idx": 2,
+      "version": "5",
+      "when": 1770692651236,
+      "tag": "0002_puzzling_roland_deschain",
+      "breakpoints": true
+    },
+    {
+      "idx": 3,
+      "version": "5",
+      "when": 1770732664472,
+      "tag": "0003_public_power_man",
+      "breakpoints": true
+    },
+    {
+      "idx": 4,
+      "version": "5",
+      "when": 1770771465553,
+      "tag": "0004_tiny_random",
+      "breakpoints": true
+    },
+    {
+      "idx": 5,
+      "version": "5",
+      "when": 1770774052511,
+      "tag": "0005_early_zarda",
+      "breakpoints": true
+    }
+  ]
+}

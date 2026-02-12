@@ -1,0 +1,163 @@
+import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+
+/**
+ * Core user table backing auth flow.
+ * Extend this file with additional tables as your product grows.
+ * Columns use camelCase to match both database fields and generated types.
+ */
+export const users = mysqlTable("users", {
+  /**
+   * Surrogate primary key. Auto-incremented numeric value managed by the database.
+   * Use this for relations between tables.
+   */
+  id: int("id").autoincrement().primaryKey(),
+  /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
+  openId: varchar("openId", { length: 64 }).notNull().unique(),
+  avatarUrl: text("avatarUrl"),
+  name: text("name"),
+  email: varchar("email", { length: 320 }),
+  passwordHash: varchar("passwordHash", { length: 256 }),
+  loginMethod: varchar("loginMethod", { length: 64 }),
+  role: mysqlEnum("role", ["user", "admin"]).default("user").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  lastSignedIn: timestamp("lastSignedIn").defaultNow().notNull(),
+});
+
+export type User = typeof users.$inferSelect;
+export type InsertUser = typeof users.$inferInsert;
+
+/**
+ * User profile with XP and level information
+ */
+export const userProfiles = mysqlTable("userProfiles", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull().unique(),
+  totalXp: int("totalXp").default(0).notNull(),
+  currentLevel: int("currentLevel").default(1).notNull(),
+  xpInCurrentLevel: int("xpInCurrentLevel").default(0).notNull(),
+  xpNeededForNextLevel: int("xpNeededForNextLevel").default(100).notNull(),
+  hp: int("hp").default(100).notNull(),
+  streak: int("streak").default(0).notNull(),
+  lastStreakUpdate: timestamp("lastStreakUpdate"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserProfile = typeof userProfiles.$inferSelect;
+export type InsertUserProfile = typeof userProfiles.$inferInsert;
+
+/**
+ * Tasks/Habits created by users
+ */
+export const tasks = mysqlTable("tasks", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  title: text("title").notNull(),
+  description: text("description"),
+  epicName: text("epicName"), // AI Generated Epic Name
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
+  xpReward: int("xpReward").notNull(),
+  xpPenalty: int("xpPenalty").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Task = typeof tasks.$inferSelect;
+export type InsertTask = typeof tasks.$inferInsert;
+
+/**
+ * Daily task completions
+ */
+export const taskCompletions = mysqlTable("taskCompletions", {
+  id: int("id").autoincrement().primaryKey(),
+  taskId: int("taskId").notNull(),
+  userId: int("userId").notNull(),
+  completedAt: timestamp("completedAt").defaultNow().notNull(),
+  xpGained: int("xpGained").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type TaskCompletion = typeof taskCompletions.$inferSelect;
+export type InsertTaskCompletion = typeof taskCompletions.$inferInsert;
+
+/**
+ * Guilds
+ */
+export const guilds = mysqlTable("guilds", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 100 }).notNull().unique(),
+  description: text("description"),
+  bannerUrl: text("bannerUrl"),
+  inviteCode: varchar("inviteCode", { length: 12 }).unique(),
+  leaderId: int("leaderId").notNull(),
+  totalXp: int("totalXp").default(0).notNull(),
+  totalRaidsCompleted: int("totalRaidsCompleted").default(0).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type Guild = typeof guilds.$inferSelect;
+export type InsertGuild = typeof guilds.$inferInsert;
+
+/**
+ * Guild members (N:N users <-> guilds)
+ */
+export const guildMembers = mysqlTable("guildMembers", {
+  id: int("id").autoincrement().primaryKey(),
+  guildId: int("guildId").notNull(),
+  userId: int("userId").notNull(),
+  role: mysqlEnum("role", ["leader", "officer", "member"]).default("member").notNull(),
+  joinedAt: timestamp("joinedAt").defaultNow().notNull(),
+});
+
+export type GuildMember = typeof guildMembers.$inferSelect;
+export type InsertGuildMember = typeof guildMembers.$inferInsert;
+
+/**
+ * Guild raids — monthly tasks assigned by the leader
+ */
+export const guildRaids = mysqlTable("guildRaids", {
+  id: int("id").autoincrement().primaryKey(),
+  guildId: int("guildId").notNull(),
+  title: varchar("title", { length: 200 }).notNull(),
+  description: text("description"),
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
+  xpReward: int("xpReward").default(500).notNull(),
+  assignedByUserId: int("assignedByUserId").notNull(),
+  status: mysqlEnum("status", ["active", "completed", "failed"]).default("active").notNull(),
+  month: int("month").notNull(),
+  year: int("year").notNull(),
+  completedAt: timestamp("completedAt"),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type GuildRaid = typeof guildRaids.$inferSelect;
+export type InsertGuildRaid = typeof guildRaids.$inferInsert;
+
+/**
+ * Friendships (bi-directional, with pending/accepted status)
+ */
+export const friendships = mysqlTable("friendships", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  friendId: int("friendId").notNull(),
+  status: mysqlEnum("status", ["pending", "accepted"]).default("pending").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Friendship = typeof friendships.$inferSelect;
+export type InsertFriendship = typeof friendships.$inferInsert;
+
+/**
+ * Guild Raid Participants - tracks individual completion of a raid
+ */
+export const guildRaidParticipants = mysqlTable("guildRaidParticipants", {
+  id: int("id").autoincrement().primaryKey(),
+  raidId: int("raidId").notNull(),
+  userId: int("userId").notNull(),
+  completedAt: timestamp("completedAt").defaultNow().notNull(),
+});
+
+export type GuildRaidParticipant = typeof guildRaidParticipants.$inferSelect;
+export type InsertGuildRaidParticipant = typeof guildRaidParticipants.$inferInsert;

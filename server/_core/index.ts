@@ -30,6 +30,12 @@ async function findAvailablePort(startPort: number = 3000): Promise<number> {
 async function startServer() {
   console.log("Starting server process...");
   const app = express();
+
+  // Health check endpoint for Railway
+  app.get("/health", (_req, res) => {
+    res.status(200).send("OK");
+  });
+
   const server = createServer(app);
   // Configure body parser with larger size limit for file uploads
   app.use(express.json({ limit: "50mb" }));
@@ -50,6 +56,14 @@ async function startServer() {
   } else {
     serveStatic(app);
   }
+
+  // Global error handler
+  app.use((err: any, _req: express.Request, res: express.Response, _next: express.NextFunction) => {
+    console.error("[ServerError]", err);
+    const status = err.status || err.statusCode || 500;
+    const message = err.message || "Internal Server Error";
+    res.status(status).json({ message });
+  });
 
   const port = parseInt(process.env.PORT || "3000");
   server.listen(port, "0.0.0.0", () => {

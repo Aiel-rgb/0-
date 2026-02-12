@@ -16,20 +16,25 @@ const timeoutPromise = (ms: number) => new Promise((_, reject) =>
 export async function getDb() {
   if (_dbChecked) return _db;
 
-  if (process.env.DATABASE_URL) {
+  const dbUrl = ENV.databaseUrl;
+
+  if (dbUrl) {
     try {
       console.log("[Database] Testing connection...");
       // Test connection with a hard 2-second timeout
-      const connPromise = mysql.createConnection(process.env.DATABASE_URL);
+      const connPromise = mysql.createConnection(dbUrl);
       const testConn = await Promise.race([connPromise, timeoutPromise(2000)]) as mysql.Connection;
       await testConn.end();
 
-      _db = drizzle(process.env.DATABASE_URL);
+      _db = drizzle(dbUrl);
       console.log("[Database] Connected successfully");
     } catch (error) {
+      console.error("[Database] Connection failed:", error);
       console.warn("[Database] Not available, running in demo mode");
       _db = null;
     }
+  } else {
+    console.warn("[Database] DATABASE_URL is empty in ENV");
   }
 
   _dbChecked = true;

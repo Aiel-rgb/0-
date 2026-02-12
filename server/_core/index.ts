@@ -8,6 +8,9 @@ import { appRouter } from "../routers";
 import { createContext } from "./context";
 import { serveStatic, setupVite } from "./vite";
 
+console.log("[Runtime] Check OAUTH_SERVER_URL:", process.env.OAUTH_SERVER_URL);
+console.log("[Runtime] Check DATABASE_URL exists:", !!process.env.DATABASE_URL);
+
 function isPortAvailable(port: number): Promise<boolean> {
   return new Promise(resolve => {
     const server = net.createServer();

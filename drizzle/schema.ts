@@ -161,3 +161,35 @@ export const guildRaidParticipants = mysqlTable("guildRaidParticipants", {
 
 export type GuildRaidParticipant = typeof guildRaidParticipants.$inferSelect;
 export type InsertGuildRaidParticipant = typeof guildRaidParticipants.$inferInsert;
+
+/**
+ * Daily Tasks — preset healthy habit challenges that reset every day at midnight
+ */
+export const dailyTasks = mysqlTable("dailyTasks", {
+  id: int("id").autoincrement().primaryKey(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  emoji: varchar("emoji", { length: 8 }).default("✅").notNull(),
+  xpReward: int("xpReward").default(50).notNull(),
+  goldReward: int("goldReward").default(25).notNull(),
+  category: varchar("category", { length: 64 }).default("health").notNull(),
+  active: int("active").default(1).notNull(), // 1 = active, 0 = disabled
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type DailyTask = typeof dailyTasks.$inferSelect;
+export type InsertDailyTask = typeof dailyTasks.$inferInsert;
+
+/**
+ * Daily Task Completions — tracks which user completed which daily task on which date
+ */
+export const dailyTaskCompletions = mysqlTable("dailyTaskCompletions", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  dailyTaskId: int("dailyTaskId").notNull(),
+  completedDate: varchar("completedDate", { length: 10 }).notNull(), // YYYY-MM-DD
+  completedAt: timestamp("completedAt").defaultNow().notNull(),
+});
+
+export type DailyTaskCompletion = typeof dailyTaskCompletions.$inferSelect;
+export type InsertDailyTaskCompletion = typeof dailyTaskCompletions.$inferInsert;

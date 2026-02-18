@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -555,6 +555,29 @@ export const appRouter = router({
         const success = await rejectOrRemoveFriend(input.friendshipId, ctx.user.id);
         if (!success) throw new Error("Erro ao remover amigo.");
         return { success };
+      }),
+  }),
+
+  // Daily Tasks router
+  dailyTasks: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      await seedDailyTasksIfEmpty();
+      const today = new Date().toISOString().split("T")[0];
+      const [tasks, completions] = await Promise.all([
+        getActiveDailyTasks(),
+        getUserDailyCompletions(ctx.user.id, today),
+      ]);
+      const completedIds = new Set(completions.map(c => c.dailyTaskId));
+      return tasks.map(t => ({ ...t, completedToday: completedIds.has(t.id) }));
+    }),
+
+    complete: protectedProcedure
+      .input(z.object({ dailyTaskId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await completeDailyTask(ctx.user.id, input.dailyTaskId);
+        if (result.alreadyDone) throw new Error("Tarefa já concluída hoje!");
+        if (!result.success) throw new Error("Erro ao completar tarefa diária.");
+        return result;
       }),
   }),
 });

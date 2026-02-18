@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users } from "lucide-react";
+import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
@@ -16,6 +16,7 @@ import { DungeonMap } from "@/components/DungeonMap";
 import { Shop } from "@/components/Shop";
 import { Achievements } from "@/components/Achievements";
 import { StatsCharts } from "@/components/StatsCharts";
+import { DailyTasks } from "@/components/DailyTasks";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { trpc } from "@/lib/trpc";
@@ -27,7 +28,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [showStats, setShowStats] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "dungeon" | "shop" | "achievements">("list");
+  const [viewMode, setViewMode] = useState<"list" | "dungeon" | "shop" | "achievements" | "daily">("list");
   const [completingId, setCompletingId] = useState<number | null>(null);
   const { play } = useSound();
 
@@ -286,6 +287,7 @@ export default function Dashboard() {
       case "dungeon": return "Mapa da Masmorra";
       case "shop": return "Loja de Recompensas";
       case "achievements": return "Sala de Troféus";
+      case "daily": return "Desafios Diários";
     }
   };
 
@@ -295,6 +297,7 @@ export default function Dashboard() {
       case "dungeon": return <Compass className="w-5 h-5 text-primary" />;
       case "shop": return <Gem className="w-5 h-5 text-primary" />;
       case "achievements": return <Trophy className="w-5 h-5 text-primary" />;
+      case "daily": return <CalendarCheck className="w-5 h-5 text-primary" />;
     }
   };
 
@@ -421,6 +424,15 @@ export default function Dashboard() {
                         >
                           <Trophy className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant={viewMode === "daily" ? "secondary" : "ghost"}
+                          size="icon"
+                          className="h-9 w-9"
+                          onClick={() => setViewMode("daily")}
+                          title="Desafios Diários"
+                        >
+                          <CalendarCheck className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                     {viewMode === "list" && <AddQuestDialog onAdd={handleAddTask} />}
@@ -444,6 +456,10 @@ export default function Dashboard() {
             ) : viewMode === "achievements" ? (
               <div className="min-h-[400px]">
                 <Achievements />
+              </div>
+            ) : viewMode === "daily" ? (
+              <div className="min-h-[400px] bg-card border border-border rounded-xl p-6 shadow-lg">
+                <DailyTasks />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">

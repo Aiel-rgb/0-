@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, or } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions } from "../drizzle/schema";
 import crypto from "crypto";
 import { ENV } from './_core/env';
 
@@ -864,3 +864,115 @@ export async function getGuildByInviteCode(code: string) {
     return undefined;
   }
 }
+
+// ═══════════════════════════════════════════════════════
+// DAILY TASKS FUNCTIONS
+// ═══════════════════════════════════════════════════════
+
+const DEFAULT_DAILY_TASKS = [
+  { title: "Beba 3 litros de água", description: "Hidratação é essencial para o corpo e a mente.", emoji: "💧", xpReward: 50, goldReward: 25, category: "health" },
+  { title: "Faça 10 flexões", description: "Fortaleça o corpo com um exercício simples.", emoji: "💪", xpReward: 60, goldReward: 30, category: "fitness" },
+  { title: "Caminhe por 20 minutos", description: "Uma caminhada diária melhora o humor e a saúde.", emoji: "🚶", xpReward: 70, goldReward: 35, category: "fitness" },
+  { title: "Leia por 15 minutos", description: "Alimente sua mente com conhecimento.", emoji: "📖", xpReward: 50, goldReward: 25, category: "mind" },
+  { title: "Faça 5 min de respiração consciente", description: "Reduza o estresse com meditação simples.", emoji: "🧘", xpReward: 40, goldReward: 20, category: "mind" },
+  { title: "Coma uma refeição saudável", description: "Nutrição é a base do seu progresso.", emoji: "🥗", xpReward: 50, goldReward: 25, category: "health" },
+  { title: "Durma antes da meia-noite", description: "O sono é o maior aliado da sua evolução.", emoji: "😴", xpReward: 80, goldReward: 40, category: "health" },
+];
+
+export async function seedDailyTasksIfEmpty(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    const existing = await db.select({ id: dailyTasks.id }).from(dailyTasks).limit(1);
+    if (existing.length === 0) {
+      await db.insert(dailyTasks).values(DEFAULT_DAILY_TASKS);
+      console.log("[DailyTasks] Seeded default daily tasks");
+    }
+  } catch (e) {
+    console.warn("[DailyTasks] Failed to seed daily tasks:", e);
+  }
+}
+
+export async function getActiveDailyTasks() {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(dailyTasks).where(eq(dailyTasks.active, 1));
+  } catch (e) {
+    console.warn("[DailyTasks] Failed to get daily tasks:", e);
+    return [];
+  }
+}
+
+export async function getUserDailyCompletions(userId: number, date: string) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(dailyTaskCompletions)
+      .where(and(eq(dailyTaskCompletions.userId, userId), eq(dailyTaskCompletions.completedDate, date)));
+  } catch (e) {
+    console.warn("[DailyTasks] Failed to get completions:", e);
+    return [];
+  }
+}
+
+export async function completeDailyTask(userId: number, dailyTaskId: number): Promise<{ success: boolean; alreadyDone: boolean; xpReward: number; goldReward: number }> {
+  const db = await getDb();
+  if (!db) return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
+  try {
+    const today = new Date().toISOString().split("T")[0];
+
+    // Check if already completed today
+    const existing = await db
+      .select()
+      .from(dailyTaskCompletions)
+      .where(and(
+        eq(dailyTaskCompletions.userId, userId),
+        eq(dailyTaskCompletions.dailyTaskId, dailyTaskId),
+        eq(dailyTaskCompletions.completedDate, today)
+      ))
+      .limit(1);
+
+    if (existing.length > 0) {
+      return { success: false, alreadyDone: true, xpReward: 0, goldReward: 0 };
+    }
+
+    // Get task rewards
+    const taskResult = await db.select().from(dailyTasks).where(eq(dailyTasks.id, dailyTaskId)).limit(1);
+    if (taskResult.length === 0) return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
+    const task = taskResult[0];
+
+    // Record completion
+    await db.insert(dailyTaskCompletions).values({ userId, dailyTaskId, completedDate: today });
+
+    // Grant XP
+    await updateUserProgress(userId, task.xpReward);
+
+    return { success: true, alreadyDone: false, xpReward: task.xpReward, goldReward: task.goldReward };
+  } catch (e) {
+    console.warn("[DailyTasks] Failed to complete daily task:", e);
+    return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
+  }
+}
+
+export async function getFriendDailyProgress(friendId: number) {
+  const db = await getDb();
+  if (!db) return { completed: 0, total: 0 };
+  try {
+    const today = new Date().toISOString().split("T")[0];
+    const [totalResult, completedResult] = await Promise.all([
+      db.select({ count: sql<number>`count(*)` }).from(dailyTasks).where(eq(dailyTasks.active, 1)),
+      db.select({ count: sql<number>`count(*)` }).from(dailyTaskCompletions)
+        .where(and(eq(dailyTaskCompletions.userId, friendId), eq(dailyTaskCompletions.completedDate, today))),
+    ]);
+    return {
+      completed: Number(completedResult[0]?.count ?? 0),
+      total: Number(totalResult[0]?.count ?? 0),
+    };
+  } catch (e) {
+    return { completed: 0, total: 0 };
+  }
+}
+

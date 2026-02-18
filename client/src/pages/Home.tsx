@@ -6,7 +6,7 @@ import { useRef } from "react";
 import { toast } from "sonner";
 
 /**
- * Peak Habit Landing Page
+ * RP8 Landing Page
  * Design Philosophy: Dark Tech Minimalism with Gamification Visual
  * - Dark background (#0a0a0a) with neon accents (cyan, green, purple)
  * - Space Grotesk for headlines, Inter for body text
@@ -407,7 +407,7 @@ export default function Home() {
         <div className="container">
           <div className="grid md:grid-cols-4 gap-8 mb-8">
             <div>
-              <h4 className="font-display text-primary mb-4">Peak Habit</h4>
+              <h4 className="font-display text-primary mb-4">RP8</h4>
               <p className="text-sm text-muted-foreground">
                 Transforme sua vida em 75 dias com gamificação e disciplina.
               </p>
@@ -478,7 +478,7 @@ export default function Home() {
           </div>
           <div className="border-t border-border pt-8 flex flex-col md:flex-row justify-between items-center">
             <p className="text-sm text-muted-foreground">
-              © 2026 Peak Habit. Todos os direitos reservados.
+              © 2026 RP8. Todos os direitos reservados.
             </p>
             <div className="flex gap-4 mt-4 md:mt-0">
               <button onClick={handleLearnMore} className="text-muted-foreground hover:text-primary transition">

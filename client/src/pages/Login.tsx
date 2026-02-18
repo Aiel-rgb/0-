@@ -21,7 +21,7 @@ export default function Login() {
     onSuccess: () => {
       console.log("Login mutation success!");
       toast.success("Login realizado com sucesso!", {
-        description: "Bem-vindo ao Peak Habit!",
+        description: "Bem-vindo ao RP8!",
       });
       // Force navigation to ensure auth state is refreshed
       window.location.href = "/dashboard";

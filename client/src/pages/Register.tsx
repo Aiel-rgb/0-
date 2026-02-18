@@ -19,7 +19,7 @@ export default function Register() {
     const registerMutation = trpc.auth.register.useMutation({
         onSuccess: () => {
             toast.success("Conta criada com sucesso!", {
-                description: "Bem-vindo ao Peak Habit!",
+                description: "Bem-vindo ao RP8!",
             });
             window.location.href = "/dashboard";
         },

@@ -2,15 +2,14 @@ import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
-import { Mountain, Zap } from "lucide-react";
+import { Mountain } from "lucide-react";
 import { useState } from "react";
 import { useLocation, Link } from "wouter";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 
 /**
- * Login page with predefined admin credentials
- * Admin: admin@peakhabit.com / password: admin123
+ * Public login page for regular users
  */
 export default function Login() {
   const [, setLocation] = useLocation();
@@ -19,11 +18,9 @@ export default function Login() {
 
   const loginMutation = trpc.auth.login.useMutation({
     onSuccess: () => {
-      console.log("Login mutation success!");
       toast.success("Login realizado com sucesso!", {
         description: "Bem-vindo ao RP8!",
       });
-      // Force navigation to ensure auth state is refreshed
       window.location.href = "/dashboard";
     },
     onError: (error) => {
@@ -33,17 +30,9 @@ export default function Login() {
     }
   });
 
-  const ADMIN_EMAIL = "admin@peakhabit.com";
-  const ADMIN_PASSWORD = "admin123";
-
   const handleLogin = (e: React.FormEvent) => {
     e.preventDefault();
     loginMutation.mutate({ email, password });
-  };
-
-  const handleDemoLogin = () => {
-    setEmail(ADMIN_EMAIL);
-    setPassword(ADMIN_PASSWORD);
   };
 
   return (
@@ -52,7 +41,7 @@ export default function Login() {
         {/* Logo */}
         <div className="flex items-center justify-center gap-2 mb-8">
           <Mountain className="h-10 w-10 text-primary" />
-          <span className="font-display text-2xl text-primary">PEAK</span>
+          <span className="font-display text-2xl text-primary">RP8</span>
         </div>
 
         {/* Login Card */}
@@ -60,7 +49,7 @@ export default function Login() {
           <div className="mb-8">
             <h1 className="text-3xl font-display mb-2">Bem-vindo</h1>
             <p className="text-muted-foreground">
-              Faça login para começar seu desafio de 75 dias
+              Faça login para continuar sua jornada
             </p>
           </div>
 
@@ -103,32 +92,6 @@ export default function Login() {
             </Button>
           </form>
 
-          {/* Demo Credentials */}
-          <div className="mt-8 pt-8 border-t border-border">
-            <p className="text-sm text-muted-foreground mb-4">
-              Credenciais de demonstração:
-            </p>
-            <div className="space-y-3 mb-4">
-              <div className="bg-secondary/50 p-3 rounded-lg">
-                <p className="text-xs text-muted-foreground">Email</p>
-                <p className="text-sm font-mono">{ADMIN_EMAIL}</p>
-              </div>
-              <div className="bg-secondary/50 p-3 rounded-lg">
-                <p className="text-xs text-muted-foreground">Senha</p>
-                <p className="text-sm font-mono">{ADMIN_PASSWORD}</p>
-              </div>
-            </div>
-            <Button
-              type="button"
-              variant="outline"
-              className="w-full border-border hover:bg-secondary"
-              onClick={handleDemoLogin}
-              disabled={loginMutation.isPending}
-            >
-              <Zap className="h-4 w-4 mr-2" />
-              Usar Credenciais Demo
-            </Button>
-          </div>
           {/* Register Link */}
           <div className="mt-6 text-center text-sm">
             <p className="text-muted-foreground">
@@ -139,13 +102,6 @@ export default function Login() {
             </p>
           </div>
         </Card>
-
-        {/* Footer Info */}
-        <div className="mt-8 text-center text-sm text-muted-foreground">
-          <p>
-            Este é um ambiente de demonstração. Os dados não são persistidos entre sessões.
-          </p>
-        </div>
       </div>
     </div>
   );

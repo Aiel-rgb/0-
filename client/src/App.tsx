@@ -13,6 +13,7 @@ const Register = React.lazy(() => import("@/pages/Register"));
 const Profile = React.lazy(() => import("@/pages/Profile"));
 const GuildPage = React.lazy(() => import("@/pages/GuildPage"));
 const NotFound = React.lazy(() => import("@/pages/NotFound"));
+const AdminLogin = React.lazy(() => import("@/pages/AdminLogin"));
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -35,6 +36,7 @@ function Router() {
         <Switch>
           <Route path="/register" component={Register} />
           <Route path="/login" component={Login} />
+          <Route path="/admin-access" component={AdminLogin} />
           {/* Catch-all for unauthenticated users -> Login */}
           <Route component={Login} />
         </Switch>

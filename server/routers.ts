@@ -8,7 +8,7 @@ import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
 import path from "path";
-import { eq, sql } from "drizzle-orm";
+import { eq, sql, ne } from "drizzle-orm";
 import { userProfiles, users, guildMembers, guilds } from "../drizzle/schema";
 
 export const appRouter = router({
@@ -249,6 +249,7 @@ export const appRouter = router({
           })
           .from(userProfiles)
           .innerJoin(users, eq(userProfiles.userId, users.id))
+          .where(ne(users.role, "admin"))
           .orderBy(sql`${userProfiles.currentLevel} DESC, ${userProfiles.totalXp} DESC`)
           .limit(10);
 

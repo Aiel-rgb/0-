@@ -168,7 +168,7 @@ const consumableShopItems: ConsumableShopEntry[] = [
 ];
 
 // ── Shop Component ─────────────────────────────────────
-export function Shop() {
+export function Shop({ isAdmin = false }: { isAdmin?: boolean }) {
     // Cosmetic items state (one-time purchases)
     const [items, setItems] = useState<ShopItem[]>(() => {
         const saved = localStorage.getItem("shop_inventory");
@@ -303,14 +303,16 @@ export function Shop() {
                         <span className="text-2xl font-display font-bold text-yellow-400">{gold} Ouro</span>
                     </div>
                 </div>
-                <Button variant="ghost" size="sm" className="relative z-10 text-xs" onClick={() => {
-                    setGold(g => g + 500);
-                    localStorage.setItem("shop_gold", String(gold + 500));
-                    play("coin");
-                    toast.success("Trapaça! +500 Ouro");
-                }}>
-                    Ganhar mais
-                </Button>
+                {isAdmin && (
+                    <Button variant="ghost" size="sm" className="relative z-10 text-xs" onClick={() => {
+                        setGold(g => g + 500);
+                        localStorage.setItem("shop_gold", String(gold + 500));
+                        play("coin");
+                        toast.success("+500 Ouro (Admin)");
+                    }}>
+                        Ganhar mais
+                    </Button>
+                )}
             </div>
 
             {/* Inventory Section */}

@@ -439,7 +439,7 @@ export default function Dashboard() {
               </div>
             ) : viewMode === "shop" ? (
               <div className="min-h-[400px]">
-                <Shop />
+                <Shop isAdmin={user?.role === "admin"} />
               </div>
             ) : viewMode === "achievements" ? (
               <div className="min-h-[400px]">

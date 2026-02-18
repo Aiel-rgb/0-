@@ -14,6 +14,7 @@ const Profile = React.lazy(() => import("@/pages/Profile"));
 const GuildPage = React.lazy(() => import("@/pages/GuildPage"));
 const NotFound = React.lazy(() => import("@/pages/NotFound"));
 const AdminLogin = React.lazy(() => import("@/pages/AdminLogin"));
+const FriendsPage = React.lazy(() => import("@/pages/FriendsPage"));
 
 function Router() {
   const { user, isLoading } = useUser();
@@ -61,6 +62,7 @@ function Router() {
         <Route path="/guild/invite/:code">
           {(params) => <GuildPage inviteCode={params.code} />}
         </Route>
+        <Route path="/friends" component={FriendsPage} />
         <Route path="/" component={Dashboard} />
         {/* If user is authenticated but route not found, redirect to dashboard ? or Show NotFound */}
         <Route component={NotFound} />

@@ -335,7 +335,7 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
-              onClick={() => setLocation("/profile")}
+              onClick={() => setLocation("/friends")}
               className="border-green-500/20 hover:bg-green-500/10"
             >
               <Users className="mr-2 h-4 w-4" />

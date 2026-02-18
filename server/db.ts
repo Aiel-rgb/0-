@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, or } from "drizzle-orm";
+import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions } from "../drizzle/schema";
@@ -841,6 +841,33 @@ export async function getFriendRequests(userId: number) {
     return result;
   } catch (error) {
     console.error("[Database] Failed to get friend requests:", error);
+    return [];
+  }
+}
+
+export async function searchUsers(query: string, excludeUserId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    const results = await db
+      .select({
+        id: users.id,
+        name: users.name,
+        avatarUrl: users.avatarUrl,
+        level: userProfiles.currentLevel,
+        totalXp: userProfiles.totalXp,
+      })
+      .from(users)
+      .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
+      .where(and(
+        sql`LOWER(${users.name}) LIKE ${`%${query.toLowerCase()}%`}`,
+        ne(users.id, excludeUserId),
+        ne(users.role, "admin"),
+      ))
+      .limit(10);
+    return results;
+  } catch (error) {
+    console.error("[Database] Failed to search users:", error);
     return [];
   }
 }

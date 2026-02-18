@@ -42,6 +42,8 @@ export const userProfiles = mysqlTable("userProfiles", {
   lastStreakUpdate: timestamp("lastStreakUpdate"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+  equippedThemeId: varchar("equippedThemeId", { length: 64 }).default("default").notNull(),
+  lastSeenVersion: varchar("lastSeenVersion", { length: 32 }).default("0.0.0").notNull(),
 });
 
 export type UserProfile = typeof userProfiles.$inferSelect;
@@ -193,3 +195,66 @@ export const dailyTaskCompletions = mysqlTable("dailyTaskCompletions", {
 
 export type DailyTaskCompletion = typeof dailyTaskCompletions.$inferSelect;
 export type InsertDailyTaskCompletion = typeof dailyTaskCompletions.$inferInsert;
+
+/**
+ * Monthly Dungeons — themed dungeons that run for a calendar month
+ */
+export const dungeons = mysqlTable("dungeons", {
+  id: int("id").autoincrement().primaryKey(),
+  name: varchar("name", { length: 128 }).notNull(),
+  theme: varchar("theme", { length: 64 }).notNull(), // e.g. "astral", "fire", "ice"
+  description: text("description"),
+  bannerEmoji: varchar("bannerEmoji", { length: 8 }).default("🏰").notNull(),
+  themeRewardId: varchar("themeRewardId", { length: 64 }), // CSS theme key
+  startsAt: timestamp("startsAt").notNull(),
+  endsAt: timestamp("endsAt").notNull(),
+  active: int("active").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type Dungeon = typeof dungeons.$inferSelect;
+export type InsertDungeon = typeof dungeons.$inferInsert;
+
+/**
+ * Dungeon Missions — preset missions within a monthly dungeon
+ */
+export const dungeonMissions = mysqlTable("dungeonMissions", {
+  id: int("id").autoincrement().primaryKey(),
+  dungeonId: int("dungeonId").notNull(),
+  title: varchar("title", { length: 256 }).notNull(),
+  description: text("description"),
+  difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
+  xpReward: int("xpReward").default(100).notNull(),
+  goldReward: int("goldReward").default(50).notNull(),
+  orderIndex: int("orderIndex").default(0).notNull(),
+});
+
+export type DungeonMission = typeof dungeonMissions.$inferSelect;
+export type InsertDungeonMission = typeof dungeonMissions.$inferInsert;
+
+/**
+ * Dungeon Progress — tracks which missions a user has completed
+ */
+export const dungeonProgress = mysqlTable("dungeonProgress", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  dungeonId: int("dungeonId").notNull(),
+  missionId: int("missionId").notNull(),
+  completedAt: timestamp("completedAt").defaultNow().notNull(),
+});
+
+export type DungeonProgress = typeof dungeonProgress.$inferSelect;
+export type InsertDungeonProgress = typeof dungeonProgress.$inferInsert;
+
+/**
+ * User Themes — cosmetic themes unlocked by completing monthly dungeons
+ */
+export const userThemes = mysqlTable("userThemes", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  themeId: varchar("themeId", { length: 64 }).notNull(), // e.g. "astral"
+  unlockedAt: timestamp("unlockedAt").defaultNow().notNull(),
+});
+
+export type UserTheme = typeof userThemes.$inferSelect;
+export type InsertUserTheme = typeof userThemes.$inferInsert;

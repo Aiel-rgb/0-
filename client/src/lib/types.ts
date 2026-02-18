@@ -24,6 +24,7 @@ export interface UserProfile {
     totalXp: number;
     currentXp: number;
     xpNeeded: number;
+    lastSeenVersion?: string;
 }
 
 export interface Guild {

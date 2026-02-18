@@ -14,6 +14,7 @@ import { Dialog, DialogContent, DialogHeader, DialogTitle, DialogTrigger } from 
 import { CreateGuildDialog } from "@/components/CreateGuildDialog";
 import { GuildCard } from "@/components/GuildCard";
 import { LevelAvatar, getRankName } from "@/components/LevelAvatar";
+import { BattleFeed } from "@/components/BattleFeed";
 
 import { trpc } from "@/lib/trpc";
 
@@ -272,6 +273,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                         </div>
                     </div>
                 </main>
+                <BattleFeed />
             </div>
         );
     }

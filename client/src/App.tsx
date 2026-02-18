@@ -5,6 +5,8 @@ import { useUser } from "@/lib/useUser";
 import { Loader2 } from "lucide-react";
 import React, { Suspense, useEffect } from "react";
 import LoadingScreen from "@/components/LoadingScreen";
+import { trpc } from "@/lib/trpc";
+import { cn } from "@/lib/utils";
 
 // Lazy load pages
 const Dashboard = React.lazy(() => import("@/pages/Dashboard"));
@@ -19,6 +21,14 @@ const FriendsPage = React.lazy(() => import("@/pages/FriendsPage"));
 function Router() {
   const { user, isLoading } = useUser();
   const [location, setLocation] = useLocation();
+
+  const { data: profile } = trpc.profile.getProfile.useQuery(undefined, {
+    enabled: !!user,
+    refetchOnWindowFocus: false
+  });
+  const themeClass = profile?.equippedThemeId && profile.equippedThemeId !== 'default'
+    ? `theme-${profile.equippedThemeId}`
+    : '';
 
   if (isLoading) {
     return <LoadingScreen />;
@@ -52,22 +62,24 @@ function Router() {
   }
 
   return (
-    <Suspense fallback={<LoadingScreen />}>
-      <Switch>
-        <Route path="/dashboard" component={Dashboard} />
-        <Route path="/profile" component={Profile} />
-        <Route path="/guild">
-          <GuildPage />
-        </Route>
-        <Route path="/guild/invite/:code">
-          {(params) => <GuildPage inviteCode={params.code} />}
-        </Route>
-        <Route path="/friends" component={FriendsPage} />
-        <Route path="/" component={Dashboard} />
-        {/* If user is authenticated but route not found, redirect to dashboard ? or Show NotFound */}
-        <Route component={NotFound} />
-      </Switch>
-    </Suspense>
+    <div className={cn("min-h-screen transition-all duration-500", themeClass)}>
+      <Suspense fallback={<LoadingScreen />}>
+        <Switch>
+          <Route path="/dashboard" component={Dashboard} />
+          <Route path="/profile" component={Profile} />
+          <Route path="/guild">
+            <GuildPage />
+          </Route>
+          <Route path="/guild/invite/:code">
+            {(params) => <GuildPage inviteCode={params.code} />}
+          </Route>
+          <Route path="/friends" component={FriendsPage} />
+          <Route path="/" component={Dashboard} />
+          {/* If user is authenticated but route not found, redirect to dashboard ? or Show NotFound */}
+          <Route component={NotFound} />
+        </Switch>
+      </Suspense>
+    </div>
   );
 }
 

@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -118,6 +118,8 @@ export const appRouter = router({
         lastStreakUpdate: null,
         createdAt: new Date(),
         updatedAt: new Date(),
+        equippedThemeId: "default",
+        lastSeenVersion: "0.0.0",
       };
     }),
 
@@ -142,6 +144,8 @@ export const appRouter = router({
           lastStreakUpdate: null,
           createdAt: new Date(),
           updatedAt: new Date(),
+          equippedThemeId: "default",
+          lastSeenVersion: "0.0.0",
         };
       }),
 
@@ -189,6 +193,24 @@ export const appRouter = router({
           console.error("ProfileRouter: Upload failed", e);
           throw new Error("Failed to upload image");
         }
+      }),
+
+    getUnlockedThemes: protectedProcedure.query(async ({ ctx }) => {
+      return await getUnlockedThemes(ctx.user.id);
+    }),
+
+    equipTheme: protectedProcedure
+      .input(z.object({ themeId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await equipTheme(ctx.user.id, input.themeId);
+        return { success };
+      }),
+
+    updateLastSeenVersion: protectedProcedure
+      .input(z.object({ version: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await updateLastSeenVersion(ctx.user.id, input.version);
+        return { success };
       }),
 
     getStats: protectedProcedure.query(async ({ ctx }) => {
@@ -583,6 +605,35 @@ export const appRouter = router({
         const result = await completeDailyTask(ctx.user.id, input.dailyTaskId);
         if (result.alreadyDone) throw new Error("Tarefa já concluída hoje!");
         if (!result.success) throw new Error("Erro ao completar tarefa diária.");
+        return result;
+      }),
+  }),
+
+  // Monthly Dungeon router
+  dungeon: router({
+    active: protectedProcedure.query(async ({ ctx }) => {
+      await seedAstralDungeonIfEmpty();
+      const dungeon = await getActiveDungeon();
+      if (!dungeon) return null;
+
+      const [missions, progress] = await Promise.all([
+        getDungeonMissions(dungeon.id),
+        getUserDungeonProgress(ctx.user.id, dungeon.id),
+      ]);
+
+      return {
+        dungeon,
+        missions,
+        completedIds: progress.map((p) => p.missionId),
+      };
+    }),
+
+    completeMission: protectedProcedure
+      .input(z.object({ dungeonId: z.number().int(), missionId: z.number().int() }))
+      .mutation(async ({ ctx, input }) => {
+        const result = await completeDungeonMission(ctx.user.id, input.dungeonId, input.missionId);
+        if (result.alreadyDone) throw new Error("Missão já concluída!");
+        if (!result.success) throw new Error("Erro ao completar missão da dungeon.");
         return result;
       }),
   }),

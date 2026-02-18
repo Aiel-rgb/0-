@@ -1,0 +1,1 @@
+ALTER TABLE `userProfiles` ADD `lastSeenVersion` varchar(32) DEFAULT '0.0.0' NOT NULL;

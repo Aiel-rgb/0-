@@ -3,20 +3,21 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck } from "lucide-react";
+import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck, Swords } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
 import { DailyStats } from "@/components/DailyStats";
 import { QuestCard } from "@/components/QuestCard";
 import { AddQuestDialog } from "@/components/AddQuestDialog";
-import { BattleFeed } from "@/components/BattleFeed";
 import { HPBar } from "@/components/HPBar";
 import { DungeonMap } from "@/components/DungeonMap";
 import { Shop } from "@/components/Shop";
 import { Achievements } from "@/components/Achievements";
 import { StatsCharts } from "@/components/StatsCharts";
 import { DailyTasks } from "@/components/DailyTasks";
+import { MonthlyDungeon } from "@/components/MonthlyDungeon";
+import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { Skeleton } from "@/components/ui/skeleton";
 
 import { trpc } from "@/lib/trpc";
@@ -28,7 +29,7 @@ export default function Dashboard() {
   const [, setLocation] = useLocation();
   const queryClient = useQueryClient();
   const [showStats, setShowStats] = useState(false);
-  const [viewMode, setViewMode] = useState<"list" | "dungeon" | "shop" | "achievements" | "daily">("list");
+  const [viewMode, setViewMode] = useState<"list" | "dungeon" | "shop" | "achievements" | "daily" | "monthly">("list");
   const [completingId, setCompletingId] = useState<number | null>(null);
   const { play } = useSound();
 
@@ -288,6 +289,7 @@ export default function Dashboard() {
       case "shop": return "Loja de Recompensas";
       case "achievements": return "Sala de Troféus";
       case "daily": return "Desafios Diários";
+      case "monthly": return "Dungeon do Mês";
     }
   };
 
@@ -298,6 +300,7 @@ export default function Dashboard() {
       case "shop": return <Gem className="w-5 h-5 text-primary" />;
       case "achievements": return <Trophy className="w-5 h-5 text-primary" />;
       case "daily": return <CalendarCheck className="w-5 h-5 text-primary" />;
+      case "monthly": return <Swords className="w-5 h-5 text-primary" />;
     }
   };
 
@@ -433,6 +436,15 @@ export default function Dashboard() {
                         >
                           <CalendarCheck className="w-4 h-4" />
                         </Button>
+                        <Button
+                          variant={viewMode === "monthly" ? "secondary" : "ghost"}
+                          size="icon"
+                          className="h-9 w-9"
+                          onClick={() => setViewMode("monthly")}
+                          title="Dungeon do Mês"
+                        >
+                          <Swords className="w-4 h-4" />
+                        </Button>
                       </div>
                     )}
                     {viewMode === "list" && <AddQuestDialog onAdd={handleAddTask} />}
@@ -460,6 +472,10 @@ export default function Dashboard() {
             ) : viewMode === "daily" ? (
               <div className="min-h-[400px] bg-card border border-border rounded-xl p-6 shadow-lg">
                 <DailyTasks />
+              </div>
+            ) : viewMode === "monthly" ? (
+              <div className="min-h-[400px]">
+                <MonthlyDungeon />
               </div>
             ) : (
               <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
@@ -563,7 +579,14 @@ export default function Dashboard() {
 
         </div>
       </div>
-      <BattleFeed />
+
+      {/* Release Notes Modal */}
+      {profile && (
+        <ReleaseNotes
+          lastSeenVersion={profile.lastSeenVersion as string}
+          onClose={() => queryClient.invalidateQueries({ queryKey: [["profile", "getProfile"]] })}
+        />
+      )}
     </div>
   );
 }

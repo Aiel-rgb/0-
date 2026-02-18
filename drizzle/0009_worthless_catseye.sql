@@ -1,0 +1,1 @@
+ALTER TABLE `userProfiles` ADD `equippedThemeId` varchar(64) DEFAULT 'default' NOT NULL;

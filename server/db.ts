@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes } from "../drizzle/schema";
 import crypto from "crypto";
 import { ENV } from './_core/env';
 
@@ -1003,3 +1003,213 @@ export async function getFriendDailyProgress(friendId: number) {
   }
 }
 
+// ═══════════════════════════════════════════════════════
+// MONTHLY DUNGEON FUNCTIONS
+// ═══════════════════════════════════════════════════════
+
+const ASTRAL_DUNGEON_MISSIONS = [
+  { title: "50 Flexões", description: "Comece o aquecimento com 50 flexões de braço.", difficulty: "medium" as const, xpReward: 150, goldReward: 75, orderIndex: 0 },
+  { title: "100 Abdominais", description: "Fortaleça seu core com 100 abdominais.", difficulty: "medium" as const, xpReward: 150, goldReward: 75, orderIndex: 1 },
+  { title: "5 km Corrida", description: "Mantenha o ritmo por 5 quilômetros.", difficulty: "medium" as const, xpReward: 250, goldReward: 125, orderIndex: 2 },
+  { title: "150 Polichinelos", description: "Explosão de cardio com 150 polichinelos.", difficulty: "medium" as const, xpReward: 180, goldReward: 90, orderIndex: 3 },
+  { title: "100 Agachamentos", description: "Base sólida: 100 agachamentos profundos.", difficulty: "medium" as const, xpReward: 200, goldReward: 100, orderIndex: 4 },
+  { title: "3 min Prancha", description: "Resistência pura: 3 minutos de prancha isométrica.", difficulty: "hard" as const, xpReward: 300, goldReward: 150, orderIndex: 5 },
+  { title: "200 Abdominais", description: "Desafio dobrado: 200 abdominais para um core de aço.", difficulty: "hard" as const, xpReward: 350, goldReward: 175, orderIndex: 6 },
+  { title: "100 Flexões", description: "O dobro do esforço: 100 flexões técnicas.", difficulty: "hard" as const, xpReward: 400, goldReward: 200, orderIndex: 7 },
+  { title: "10 km Corrida", description: "A prova de fogo: 10 quilômetros sem parar.", difficulty: "hard" as const, xpReward: 500, goldReward: 250, orderIndex: 8 },
+  { title: "BOSS: Desafio do Titã", description: "A glória astral espera por quem completar todos os desafios diários por 7 dias seguidos esta semana.", difficulty: "hard" as const, xpReward: 800, goldReward: 400, orderIndex: 9 },
+];
+
+export async function seedAstralDungeonIfEmpty(): Promise<void> {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    const existing = await db.select({ id: dungeons.id }).from(dungeons).limit(1);
+    if (existing.length > 0) return;
+
+    // Dungeon runs for the current month
+    const now = new Date();
+    const startsAt = new Date(now.getFullYear(), now.getMonth(), 1);
+    const endsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+    const [inserted] = await db.insert(dungeons).values({
+      name: "Dungeon Astral",
+      theme: "astral",
+      description: "Uma jornada pelos confins do cosmos. Complete as missões antes que o portal se feche e desbloqueie o tema exclusivo ASTRAL para o seu perfil.",
+      bannerEmoji: "🌌",
+      themeRewardId: "astral",
+      startsAt,
+      endsAt,
+      active: 1,
+    });
+
+    const dungeonId = (inserted as any).insertId as number;
+    await db.insert(dungeonMissions).values(
+      ASTRAL_DUNGEON_MISSIONS.map(m => ({ ...m, dungeonId }))
+    );
+    console.log("[Dungeon] Seeded ASTRAL dungeon");
+  } catch (e) {
+    console.warn("[Dungeon] Failed to seed ASTRAL dungeon:", e);
+  }
+}
+
+export async function getActiveDungeon() {
+  const db = await getDb();
+  if (!db) return null;
+  try {
+    const now = new Date();
+    const result = await db
+      .select()
+      .from(dungeons)
+      .where(and(
+        eq(dungeons.active, 1),
+        sql`${dungeons.startsAt} <= ${now}`,
+        sql`${dungeons.endsAt} >= ${now}`,
+      ))
+      .limit(1);
+    return result.length > 0 ? result[0] : null;
+  } catch (e) {
+    console.warn("[Dungeon] Failed to get active dungeon:", e);
+    return null;
+  }
+}
+
+export async function getDungeonMissions(dungeonId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(dungeonMissions)
+      .where(eq(dungeonMissions.dungeonId, dungeonId))
+      .orderBy(dungeonMissions.orderIndex);
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function getUserDungeonProgress(userId: number, dungeonId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db
+      .select()
+      .from(dungeonProgress)
+      .where(and(eq(dungeonProgress.userId, userId), eq(dungeonProgress.dungeonId, dungeonId)));
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function completeDungeonMission(
+  userId: number,
+  dungeonId: number,
+  missionId: number
+): Promise<{ success: boolean; alreadyDone: boolean; xpReward: number; goldReward: number; themeUnlocked?: string }> {
+  const db = await getDb();
+  if (!db) return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
+  try {
+    // Check already done
+    const existing = await db
+      .select()
+      .from(dungeonProgress)
+      .where(and(
+        eq(dungeonProgress.userId, userId),
+        eq(dungeonProgress.dungeonId, dungeonId),
+        eq(dungeonProgress.missionId, missionId),
+      ))
+      .limit(1);
+
+    if (existing.length > 0) return { success: false, alreadyDone: true, xpReward: 0, goldReward: 0 };
+
+    // Get mission
+    const missionResult = await db.select().from(dungeonMissions).where(eq(dungeonMissions.id, missionId)).limit(1);
+    if (missionResult.length === 0) return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
+    const mission = missionResult[0];
+
+    // Record progress
+    await db.insert(dungeonProgress).values({ userId, dungeonId, missionId });
+
+    // Grant XP
+    await updateUserProgress(userId, mission.xpReward);
+
+    // Check if all missions completed → unlock theme
+    const allMissions = await getDungeonMissions(dungeonId);
+    const allProgress = await getUserDungeonProgress(userId, dungeonId);
+    const completedIds = new Set(allProgress.map(p => p.missionId));
+    completedIds.add(missionId);
+
+    let themeUnlocked: string | undefined;
+    if (allMissions.every(m => completedIds.has(m.id))) {
+      const dungeonResult = await db.select().from(dungeons).where(eq(dungeons.id, dungeonId)).limit(1);
+      const dungeon = dungeonResult[0];
+      if (dungeon?.themeRewardId) {
+        // Check if already unlocked
+        const existingTheme = await db
+          .select()
+          .from(userThemes)
+          .where(and(eq(userThemes.userId, userId), eq(userThemes.themeId, dungeon.themeRewardId)))
+          .limit(1);
+        if (existingTheme.length === 0) {
+          await db.insert(userThemes).values({ userId, themeId: dungeon.themeRewardId });
+          themeUnlocked = dungeon.themeRewardId;
+        }
+      }
+    }
+
+    return { success: true, alreadyDone: false, xpReward: mission.xpReward, goldReward: mission.goldReward, themeUnlocked };
+  } catch (e) {
+    console.warn("[Dungeon] Failed to complete mission:", e);
+    return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
+  }
+}
+
+export async function getUnlockedThemes(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(userThemes).where(eq(userThemes.userId, userId));
+  } catch (e) {
+    return [];
+  }
+}
+
+export async function equipTheme(userId: number, themeId: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    // Verify user owns the theme (except for 'default')
+    if (themeId !== "default") {
+      const owned = await db
+        .select()
+        .from(userThemes)
+        .where(and(eq(userThemes.userId, userId), eq(userThemes.themeId, themeId)))
+        .limit(1);
+      if (owned.length === 0) return false;
+    }
+
+    await db
+      .update(userProfiles)
+      .set({ equippedThemeId: themeId })
+      .where(eq(userProfiles.userId, userId));
+    return true;
+  } catch (e) {
+    console.error("[Dungeon] Failed to equip theme:", e);
+    return false;
+  }
+}
+
+export async function updateLastSeenVersion(userId: number, version: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db
+      .update(userProfiles)
+      .set({ lastSeenVersion: version })
+      .where(eq(userProfiles.userId, userId));
+    return true;
+  } catch (e) {
+    console.error("[Profile] Failed to update last seen version:", e);
+    return false;
+  }
+}

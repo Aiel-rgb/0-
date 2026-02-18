@@ -11,12 +11,13 @@ import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "sonner";
 import { trpc } from "@/lib/trpc";
 import { motion } from "framer-motion";
+import { cn } from "@/lib/utils";
 import {
   AreaChart, Area, XAxis, YAxis, CartesianGrid, Tooltip,
   ResponsiveContainer, PieChart, Pie, Cell, Radar, RadarChart,
   PolarGrid, PolarAngleAxis, PolarRadiusAxis, BarChart, Bar, Legend
 } from "recharts";
-import { UserPlus, UserCheck, UserX } from "lucide-react";
+import { UserPlus, UserCheck, UserX, Palette, Sparkles, CheckCircle2 } from "lucide-react";
 
 const DIFF_COLORS = { easy: "#22c55e", medium: "#3b82f6", hard: "#ef4444" };
 
@@ -76,6 +77,16 @@ export default function Profile() {
     onSuccess: () => {
       toast.success("Amigo removido.");
       refetchFriends();
+    }
+  });
+
+  const { data: unlockedThemes = [] } = trpc.profile.getUnlockedThemes.useQuery();
+  const equipThemeMutation = trpc.profile.equipTheme.useMutation({
+    onSuccess: (data) => {
+      if (data.success) {
+        toast.success("Tema aplicado com sucesso!");
+        utils.profile.getProfile.invalidate();
+      }
     }
   });
 
@@ -286,6 +297,12 @@ export default function Profile() {
                 </p>
                 <p className="text-sm text-muted-foreground mt-1">Nível {profile.currentLevel}</p>
 
+                {unlockedThemes.some(t => t.themeId === "astral") && (
+                  <Badge variant="outline" className="mt-2 text-[10px] bg-purple-500/10 text-purple-400 border-purple-500/30 flex items-center gap-1">
+                    <Sparkles className="w-3 h-3" /> Viajante Astral
+                  </Badge>
+                )}
+
                 {/* XP Bar */}
                 <div className="w-full mt-4 space-y-1">
                   <div className="flex justify-between text-xs text-muted-foreground">
@@ -318,6 +335,46 @@ export default function Profile() {
                     <span className={`font-display font-bold ${color}`}>{value}</span>
                   </div>
                 ))}
+              </div>
+            </Card>
+
+            {/* Themes Selection */}
+            <Card className="bg-card/50 border-border p-5 backdrop-blur-sm">
+              <h3 className="font-display font-bold text-sm uppercase tracking-widest text-muted-foreground mb-4 flex items-center gap-2">
+                <Palette className="w-4 h-4 text-primary" /> Visual do Perfil
+              </h3>
+              <div className="space-y-3">
+                <div
+                  className={cn(
+                    "flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer",
+                    profile.equippedThemeId === "default" ? "border-primary bg-primary/5" : "border-transparent bg-secondary/20 hover:bg-secondary/30"
+                  )}
+                  onClick={() => equipThemeMutation.mutate({ themeId: "default" })}
+                >
+                  <span className="text-sm font-medium">Padrão RP8</span>
+                  {profile.equippedThemeId === "default" && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                </div>
+
+                {unlockedThemes.map(theme => (
+                  <div
+                    key={theme.id}
+                    className={cn(
+                      "flex items-center justify-between p-2 rounded-lg border transition-all cursor-pointer",
+                      profile.equippedThemeId === theme.themeId ? "border-primary bg-primary/5 shadow-[0_0_10px_rgba(139,92,246,0.3)]" : "border-transparent bg-secondary/20 hover:bg-secondary/30"
+                    )}
+                    onClick={() => equipThemeMutation.mutate({ themeId: theme.themeId })}
+                  >
+                    <div className="flex flex-col">
+                      <span className="text-sm font-bold capitalize">{theme.themeId}</span>
+                      <span className="text-[10px] text-muted-foreground">Exclusivo de Dungeon</span>
+                    </div>
+                    {profile.equippedThemeId === theme.themeId && <CheckCircle2 className="w-4 h-4 text-primary" />}
+                  </div>
+                ))}
+
+                {unlockedThemes.length === 0 && (
+                  <p className="text-[10px] text-muted-foreground italic">Complete dungeons mensais para desbloquear novos temas visuais.</p>
+                )}
               </div>
             </Card>
 

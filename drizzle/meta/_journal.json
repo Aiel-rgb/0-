@@ -43,6 +43,13 @@
       "when": 1770774052511,
       "tag": "0005_early_zarda",
       "breakpoints": true
+    },
+    {
+      "idx": 6,
+      "version": "5",
+      "when": 1771441019306,
+      "tag": "0006_lucky_punisher",
+      "breakpoints": true
     }
   ]
 }

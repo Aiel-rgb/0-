@@ -325,13 +325,15 @@ export default function Dashboard() {
       <div className="container py-8 max-w-6xl space-y-8">
 
         {/* Header Section */}
-        <header className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700">
-          <div>
-            <h1 className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400 flex items-center gap-3">
-              <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain drop-shadow-[0_0_10px_rgba(255,255,255,0.3)]" />
-              {myGuild?.name || "RP8"}
-            </h1>
-            <p className="text-muted-foreground">Sua jornada diária começa aqui.</p>
+        <header className="flex flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700 bg-card/30 backdrop-blur-sm p-4 rounded-2xl border border-border/40">
+          <div className="flex items-center gap-4">
+            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-12 h-12 object-contain" />
+            <div>
+              <h1 className="text-xl md:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">
+                {myGuild?.name || "RP8"}
+              </h1>
+              <p className="text-xs text-muted-foreground hidden sm:block">Sua jornada diária começa aqui.</p>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             {/* Desktop Actions */}

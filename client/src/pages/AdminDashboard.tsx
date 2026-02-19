@@ -1,6 +1,7 @@
 import { Button } from "@/components/ui/button";
 import { Card, CardHeader, CardTitle, CardDescription, CardContent } from "@/components/ui/card";
 import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
+import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { useUser } from "@/lib/useUser";
 import { Loader2, Plus, Check, Trash2, Sparkles, Package, Map, ListTodo } from "lucide-react";
@@ -12,6 +13,7 @@ export default function AdminDashboard() {
     const { user } = useUser();
     const utils = trpc.useUtils();
     const [generating, setGenerating] = useState<string | null>(null);
+    const [theme, setTheme] = useState("");
 
     const { data: drafts, isLoading } = trpc.admin.listDrafts.useQuery(undefined, {
         enabled: !!user && user.role === "admin",
@@ -66,15 +68,24 @@ export default function AdminDashboard() {
                     <h1 className="text-3xl font-display font-bold tracking-tight">Painel de Curadoria</h1>
                     <p className="text-muted-foreground text-lg">Revise e aprove conteúdos gerados por IA.</p>
                 </div>
-                <div className="flex gap-2">
+                <div className="flex flex-col md:flex-row gap-3 items-end">
+                    <div className="space-y-1.5 flex-1">
+                        <label className="text-sm font-medium text-muted-foreground ml-1">Tema / Contexto para o Groq</label>
+                        <Input
+                            placeholder="Ex: Fantasia Medieval, Hábitos de Guerreiro, Itens Lendários..."
+                            value={theme}
+                            onChange={(e) => setTheme(e.target.value)}
+                            className="bg-secondary/30 border-primary/10 focus:border-primary/30 w-full md:w-80"
+                        />
+                    </div>
                     <Button
-                        variant="outline"
-                        onClick={() => handleGenerate("tasks")}
+                        variant="default"
+                        onClick={() => handleGenerate("tasks", theme)}
                         disabled={generating === "tasks"}
-                        className="bg-primary/5 hover:bg-primary/10 border-primary/20"
+                        className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-bold"
                     >
-                        {generating === "tasks" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4 text-primary" />}
-                        Gerar Tarefas
+                        {generating === "tasks" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                        Gerar 5 Tarefas
                     </Button>
                 </div>
             </header>
@@ -144,11 +155,11 @@ export default function AdminDashboard() {
                     <div className="flex justify-end">
                         <Button
                             variant="secondary"
-                            onClick={() => handleGenerate("dungeon", "Vulcão das Trevas")}
+                            onClick={() => handleGenerate("dungeon", theme || "Pântano Sombrio")}
                             disabled={generating === "dungeon"}
                         >
                             {generating === "dungeon" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            Gerar Nova Dungeon
+                            Gerar com Tema: {theme || "Pântano Sombrio"}
                         </Button>
                     </div>
 
@@ -198,7 +209,7 @@ export default function AdminDashboard() {
                             disabled={generating === "items"}
                         >
                             {generating === "items" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                            Gerar Itens
+                            Gerar Itens (com Tema)
                         </Button>
                     </div>
 

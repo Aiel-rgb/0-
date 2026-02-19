@@ -25,7 +25,7 @@ export async function generateEpicQuestName(taskTitle: string): Promise<string> 
                     content: `Task: ${taskTitle}`,
                 },
             ],
-            model: "llama3-8b-8192",
+            model: "llama-3.3-70b-versatile",
         });
 
         return completion.choices[0]?.message?.content || taskTitle;
@@ -34,7 +34,7 @@ export async function generateEpicQuestName(taskTitle: string): Promise<string> 
         return taskTitle;
     }
 }
-export async function generateDailyTasks(count: number = 5): Promise<any[]> {
+export async function generateDailyTasks(count: number = 5, theme?: string): Promise<any[]> {
     if (!process.env.GROQ_API_KEY) return [];
     try {
         const completion = await groq.chat.completions.create({
@@ -42,12 +42,13 @@ export async function generateDailyTasks(count: number = 5): Promise<any[]> {
                 {
                     role: "system",
                     content: `You are a RPG content designer. Generate ${count} daily healthy habit tasks in JSON format. 
+                    ${theme ? `Focus on the theme: ${theme}.` : ""}
                     Each task must have: title, description, category (e.g. "health", "mindset", "productivity", "exercise"), emoji, goldReward (10-100), xpReward (20-150).
                     Respond ONLY with a JSON array.`
                 },
                 { role: "user", content: "Generate now." }
             ],
-            model: "llama3-8b-8192",
+            model: "llama-3.3-70b-versatile",
             response_format: { type: "json_object" }
         });
         const content = completion.choices[0]?.message?.content || "{\"tasks\": []}";
@@ -73,7 +74,7 @@ export async function generateMonthlyDungeon(theme: string): Promise<any> {
                 },
                 { role: "user", content: "Generate now." }
             ],
-            model: "llama3-8b-8192",
+            model: "llama-3.3-70b-versatile",
             response_format: { type: "json_object" }
         });
         return JSON.parse(completion.choices[0]?.message?.content || "null");
@@ -97,7 +98,7 @@ export async function generateShopItems(count: number = 3): Promise<any[]> {
                 },
                 { role: "user", content: "Generate now." }
             ],
-            model: "llama3-8b-8192",
+            model: "llama-3.3-70b-versatile",
             response_format: { type: "json_object" }
         });
         const content = completion.choices[0]?.message?.content || "{\"items\": []}";

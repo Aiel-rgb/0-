@@ -242,6 +242,7 @@ export const dailyTasks = mysqlTable("dailyTasks", {
   category: varchar("category", { length: 64 }).default("health").notNull(),
   active: int("active").default(1).notNull(), // 1 = active, 0 = disabled
   status: mysqlEnum("status", ["draft", "active", "deleted"]).default("active").notNull(),
+  isPool: int("isPool").default(0).notNull(), // 1 = part of the 1000 tasks pool, 0 = always active or separate
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 

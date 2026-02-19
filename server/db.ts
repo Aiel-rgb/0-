@@ -1,4 +1,4 @@
-import { eq, and, sql, desc, or, ne } from "drizzle-orm";
+import { eq, and, sql, desc, or, ne, lte, gte } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
 import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes, userInventory, userCosmetics, userPets, guildUpgrades, shopItems } from "../drizzle/schema";
@@ -1031,13 +1031,13 @@ export async function getGuildByInviteCode(code: string) {
 // ═══════════════════════════════════════════════════════
 
 const DEFAULT_DAILY_TASKS = [
-  { title: "Beba 3 litros de água", description: "Hidratação é essencial para o corpo e a mente.", emoji: "💧", xpReward: 50, goldReward: 25, category: "health" },
-  { title: "Faça 10 flexões", description: "Fortaleça o corpo com um exercício simples.", emoji: "💪", xpReward: 60, goldReward: 30, category: "fitness" },
-  { title: "Caminhe por 20 minutos", description: "Uma caminhada diária melhora o humor e a saúde.", emoji: "🚶", xpReward: 70, goldReward: 35, category: "fitness" },
-  { title: "Leia por 15 minutos", description: "Alimente sua mente com conhecimento.", emoji: "📖", xpReward: 50, goldReward: 25, category: "mind" },
-  { title: "Faça 5 min de respiração consciente", description: "Reduza o estresse com meditação simples.", emoji: "🧘", xpReward: 40, goldReward: 20, category: "mind" },
-  { title: "Coma uma refeição saudável", description: "Nutrição é a base do seu progresso.", emoji: "🥗", xpReward: 50, goldReward: 25, category: "health" },
-  { title: "Durma antes da meia-noite", description: "O sono é o maior aliado da sua evolução.", emoji: "😴", xpReward: 80, goldReward: 40, category: "health" },
+  { title: "Beba 3 litros de água", description: "Hidratação é essencial para o corpo e a mente.", emoji: "💧", xpReward: 50, goldReward: 25, category: "health", isPool: 0 },
+  { title: "Faça 10 flexões", description: "Fortaleça o corpo com um exercício simples.", emoji: "💪", xpReward: 60, goldReward: 30, category: "fitness", isPool: 1 },
+  { title: "Caminhe por 20 minutos", description: "Uma caminhada diária melhora o humor e a saúde.", emoji: "🚶", xpReward: 70, goldReward: 35, category: "fitness", isPool: 1 },
+  { title: "Leia por 15 minutos", description: "Alimente sua mente com conhecimento.", emoji: "📖", xpReward: 50, goldReward: 25, category: "mind", isPool: 1 },
+  { title: "Faça 5 min de respiração consciente", description: "Reduza o estresse com meditação simples.", emoji: "🧘", xpReward: 40, goldReward: 20, category: "mind", isPool: 1 },
+  { title: "Coma uma refeição saudável", description: "Nutrição é a base do seu progresso.", emoji: "🥗", xpReward: 50, goldReward: 25, category: "health", isPool: 1 },
+  { title: "Durma antes da meia-noite", description: "O sono é o maior aliado da sua evolução.", emoji: "😴", xpReward: 80, goldReward: 40, category: "health", isPool: 1 },
 ];
 
 export async function seedDailyTasksIfEmpty(): Promise<void> {
@@ -1058,7 +1058,27 @@ export async function getActiveDailyTasks() {
   const db = await getDb();
   if (!db) return [];
   try {
-    return await db.select().from(dailyTasks).where(and(eq(dailyTasks.active, 1), eq(dailyTasks.status, "active")));
+    // Get mandatory tasks (e.g., Water task)
+    const mandatoryTasks = await db.select().from(dailyTasks).where(
+      and(
+        eq(dailyTasks.active, 1),
+        eq(dailyTasks.status, "active"),
+        eq(dailyTasks.isPool, 0)
+      )
+    );
+
+    // Get random tasks from the pool for the day
+    const today = new Date().toISOString().split("T")[0];
+    const seed = parseInt(today.replace(/-/g, ""));
+
+    const poolTasks = await db.select().from(dailyTasks).where(
+      and(
+        eq(dailyTasks.status, "active"),
+        eq(dailyTasks.isPool, 1)
+      )
+    ).orderBy(sql`rand(${seed})`).limit(4);
+
+    return [...mandatoryTasks, ...poolTasks];
   } catch (e) {
     console.warn("[DailyTasks] Failed to get daily tasks:", e);
     return [];
@@ -1224,8 +1244,8 @@ export async function getActiveDungeon() {
       .where(and(
         eq(dungeons.active, 1),
         eq(dungeons.status, "active"),
-        sql`${dungeons.startsAt} <= ${now} `,
-        sql`${dungeons.endsAt} >= ${now} `,
+        lte(dungeons.startsAt, now),
+        gte(dungeons.endsAt, now),
       ))
       .limit(1);
     return result.length > 0 ? result[0] : null;

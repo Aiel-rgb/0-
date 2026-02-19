@@ -61,6 +61,10 @@ export const tasks = mysqlTable("tasks", {
   difficulty: mysqlEnum("difficulty", ["easy", "medium", "hard"]).default("medium").notNull(),
   xpReward: int("xpReward").notNull(),
   xpPenalty: int("xpPenalty").notNull(),
+  repeatType: mysqlEnum("repeatType", ["daily", "weekly", "none"]).default("daily").notNull(),
+  repeatDays: text("repeatDays"), // JSON array of day indices [0-6]
+  repeatEndsAt: timestamp("repeatEndsAt"),
+  isOneTimeCompleted: int("isOneTimeCompleted").default(0).notNull(), // 0 = false, 1 = true
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

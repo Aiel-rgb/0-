@@ -308,6 +308,9 @@ export const appRouter = router({
         title: z.string().min(1),
         description: z.string().optional(),
         difficulty: z.enum(["easy", "medium", "hard"]),
+        repeatType: z.enum(["daily", "weekly", "none"]).default("daily"),
+        repeatDays: z.array(z.number().int().min(0).max(6)).optional(),
+        repeatEndsAt: z.string().optional(), // ISO string
       }))
       .mutation(async ({ ctx, input }) => {
         const xpRewards = { easy: 10, medium: 25, hard: 50 };
@@ -320,6 +323,9 @@ export const appRouter = router({
             difficulty: input.difficulty,
             xpReward: xpRewards[input.difficulty],
             xpPenalty: xpPenalties[input.difficulty],
+            repeatType: input.repeatType,
+            repeatDays: input.repeatDays ? JSON.stringify(input.repeatDays) : null,
+            repeatEndsAt: input.repeatEndsAt ? new Date(input.repeatEndsAt) : null,
           });
         } catch (e) {
           console.warn("[Tasks] DB unavailable for task creation");
@@ -344,19 +350,19 @@ export const appRouter = router({
         title: z.string().min(1).optional(),
         description: z.string().optional(),
         difficulty: z.enum(["easy", "medium", "hard"]).optional(),
+        repeatType: z.enum(["daily", "weekly", "none"]).optional(),
+        repeatDays: z.array(z.number().int().min(0).max(6)).optional(),
+        repeatEndsAt: z.string().optional(),
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          // Import updateTask locally to avoid circular dependency issues if any (though imports are top-level)
-          // Actually, we need to import it at top or assume it's available.
-          // Since I can't easily add import to top in one go without reading, I'll rely on a separate import step if needed,
-          // BUT I see imports at top of file. I should add `updateTask` to the import list first or use the replacement to add it.
-          // I will do the import update in a separate step or try to add it here ? No, file is too big.
-          // I will blindly call `updateTask` here and fix import in next step.
           return await updateTask(input.id, ctx.user.id, {
             title: input.title,
             description: input.description,
             difficulty: input.difficulty,
+            repeatType: input.repeatType,
+            repeatDays: input.repeatDays ? JSON.stringify(input.repeatDays) : undefined,
+            repeatEndsAt: input.repeatEndsAt ? new Date(input.repeatEndsAt) : undefined,
           });
         } catch (e) {
           console.warn("[Tasks] DB unavailable for task update");
@@ -621,10 +627,15 @@ export const appRouter = router({
         getUserDungeonProgress(ctx.user.id, dungeon.id),
       ]);
 
+      const totalXp = missions.reduce((sum, m) => sum + m.xpReward, 0);
+      const totalGold = missions.reduce((sum, m) => sum + m.goldReward, 0);
+
       return {
         dungeon,
         missions,
         completedIds: progress.map((p) => p.missionId),
+        totalXp,
+        totalGold,
       };
     }),
 

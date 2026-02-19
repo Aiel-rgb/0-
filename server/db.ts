@@ -224,6 +224,7 @@ export async function getUserTasks(userId: number) {
   const db = await getDb();
   if (!db) return [];
 
+  // Get all tasks for the user
   const allTasks = await db.select().from(tasks).where(eq(tasks.userId, userId));
 
   // Get today's completions
@@ -238,14 +239,52 @@ export async function getUserTasks(userId: number) {
     ));
 
   const completedTaskIds = new Set(completions.map(c => c.taskId));
+  const currentDayIndex = today.getDay(); // 0 = Sunday, 1 = Monday, etc.
 
-  return allTasks.map(task => ({
+  // Filter tasks based on repetition rules
+  const activeTasks = allTasks.filter(task => {
+    // 1. Check if repetition ended
+    if (task.repeatEndsAt && new Date(task.repeatEndsAt) < today) {
+      return false;
+    }
+
+    // 2. Weekly repetition check
+    if (task.repeatType === 'weekly') {
+      if (!task.repeatDays) return false;
+      try {
+        const days = JSON.parse(task.repeatDays as string);
+        if (Array.isArray(days) && !days.includes(currentDayIndex)) {
+          return false;
+        }
+      } catch (e) {
+        return false;
+      }
+    }
+
+    // 3. One-time task check (if completed previously, don't show, unless completed TODAY)
+    if (task.repeatType === 'none' && task.isOneTimeCompleted && !completedTaskIds.has(task.id)) {
+      return false;
+    }
+
+    return true;
+  });
+
+  return activeTasks.map(task => ({
     ...task,
     completed: completedTaskIds.has(task.id)
   }));
 }
 
-export async function createTask(userId: number, task: any) {
+export async function createTask(userId: number, task: {
+  title: string;
+  description?: string;
+  difficulty: "easy" | "medium" | "hard";
+  xpReward: number;
+  xpPenalty: number;
+  repeatType?: "daily" | "weekly" | "none";
+  repeatDays?: string | null;
+  repeatEndsAt?: Date | null;
+}) {
   const db = await getDb();
   if (!db) return undefined;
   try {
@@ -257,7 +296,14 @@ export async function createTask(userId: number, task: any) {
   }
 }
 
-export async function updateTask(taskId: number, userId: number, data: { title?: string; description?: string; difficulty?: "easy" | "medium" | "hard" }) {
+export async function updateTask(taskId: number, userId: number, data: {
+  title?: string;
+  description?: string;
+  difficulty?: "easy" | "medium" | "hard";
+  repeatType?: "daily" | "weekly" | "none";
+  repeatDays?: string; // stringified JSON
+  repeatEndsAt?: Date;
+}) {
   const db = await getDb();
   if (!db) return undefined;
   try {
@@ -310,6 +356,13 @@ export async function completeTask(taskId: number, userId: number, xpGained: num
       userId,
       xpGained,
     });
+
+    // Check if it's a one-time task (repeatType = 'none')
+    const task = await db.select().from(tasks).where(eq(tasks.id, taskId)).limit(1);
+    if (task.length > 0 && task[0].repeatType === 'none') {
+      await db.update(tasks).set({ isOneTimeCompleted: 1 }).where(eq(tasks.id, taskId));
+    }
+
     // Update user XP & Streak
     await updateUserProgress(userId, xpGained);
     return true;

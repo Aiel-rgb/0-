@@ -250,7 +250,15 @@ export default function Dashboard() {
     createdAt: new Date(user.createdAt)
   } : undefined;
 
-  const handleAddTask = (data: { title: string; description?: string; difficulty: "easy" | "medium" | "hard"; deadline?: string }) => {
+  const handleAddTask = (data: {
+    title: string;
+    description?: string;
+    difficulty: "easy" | "medium" | "hard";
+    deadline?: string;
+    repeatType?: "daily" | "weekly" | "none";
+    repeatDays?: number[];
+    repeatEndsAt?: string;
+  }) => {
     if (data.deadline) {
       const today = new Date();
       const [hours, minutes] = data.deadline.split(":").map(Number);

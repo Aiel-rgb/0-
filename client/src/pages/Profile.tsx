@@ -1,6 +1,6 @@
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { Mountain, ArrowLeft, Zap, Trophy, TrendingUp, Pencil, Upload, Shield, Users, Swords, Flame, Target, Coins } from "lucide-react";
+import { Mountain, ArrowLeft, Zap, Trophy, TrendingUp, Pencil, Shield, Users, Swords, Flame, Target, Coins } from "lucide-react";
 import { useState, useEffect } from "react";
 import { useLocation } from "wouter";
 import { LevelAvatar, getRankName, getRankColor } from "@/components/LevelAvatar";
@@ -17,7 +17,8 @@ import {
   ResponsiveContainer, PieChart, Pie, Cell, Radar, RadarChart,
   PolarGrid, PolarAngleAxis, PolarRadiusAxis, BarChart, Bar, Legend
 } from "recharts";
-import { UserPlus, UserCheck, UserX, Palette, Sparkles, CheckCircle2 } from "lucide-react";
+import { UserPlus, UserCheck, UserX, Palette, Sparkles, CheckCircle2, Upload } from "lucide-react";
+import { AvatarUploadDialog } from "@/components/AvatarUploadDialog";
 
 const DIFF_COLORS = { easy: "#22c55e", medium: "#3b82f6", hard: "#ef4444" };
 
@@ -40,6 +41,7 @@ const CustomTooltip = ({ active, payload, label }: any) => {
 export default function Profile() {
   const [, setLocation] = useLocation();
   const [customAvatar, setCustomAvatar] = useState("");
+  const [isUploadDialogOpen, setIsUploadDialogOpen] = useState(false);
 
   const utils = trpc.useContext();
   const { data: user, isLoading: loadingUser } = trpc.auth.me.useQuery();
@@ -270,16 +272,27 @@ export default function Profile() {
                           </div>
                         </TabsContent>
                         <TabsContent value="upload" className="py-4 space-y-4">
-                          <div className="flex flex-col items-center justify-center border-2 border-dashed border-primary/30 rounded-xl p-8 hover:border-primary/60 transition-colors bg-primary/5">
+                          <div className="flex flex-col items-center justify-center border-2 border-dashed border-primary/30 rounded-xl p-8 hover:border-primary/60 transition-colors bg-primary/5 cursor-pointer" onClick={() => setIsUploadDialogOpen(true)}>
                             <Upload className="w-10 h-10 text-primary mb-2" />
-                            <p className="text-sm text-muted-foreground mb-4 text-center">Clique para selecionar uma foto<br />(max 5MB)</p>
-                            <Input type="file" accept="image/*" className="hidden" id="avatar-upload" onChange={handleFileUpload} />
-                            <Button asChild variant="secondary" disabled={uploadAvatarMutation.isPending}>
-                              <label htmlFor="avatar-upload" className="cursor-pointer">
-                                {uploadAvatarMutation.isPending ? "Enviando..." : "Escolher Arquivo"}
-                              </label>
+                            <p className="text-sm text-muted-foreground mb-4 text-center">Clique para abrir o editor<br />(max 5MB)</p>
+                            <Button variant="secondary">
+                              Escolher Arquivo
                             </Button>
                           </div>
+                          <AvatarUploadDialog
+                            isOpen={isUploadDialogOpen}
+                            onClose={() => setIsUploadDialogOpen(false)}
+                            onUpload={(blob) => {
+                              const reader = new FileReader();
+                              reader.onload = () => {
+                                if (typeof reader.result === 'string') {
+                                  uploadAvatarMutation.mutate({ imageData: reader.result, fileName: "avatar.jpg" });
+                                }
+                              };
+                              reader.readAsDataURL(blob);
+                            }}
+                            isUploading={uploadAvatarMutation.isPending}
+                          />
                         </TabsContent>
                         <TabsContent value="url" className="py-4 space-y-4">
                           <Input placeholder="https://exemplo.com/avatar.png" value={customAvatar} onChange={(e) => setCustomAvatar(e.target.value)} />

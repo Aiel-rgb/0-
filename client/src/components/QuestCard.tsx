@@ -1,5 +1,5 @@
 import { motion } from "framer-motion";
-import { Check, Trash2, Zap, ShieldCheck, Swords, Flame, Clock } from "lucide-react";
+import { Check, Trash2, Zap, ShieldCheck, Swords, Flame, Clock, Repeat } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
 import { cn } from "@/lib/utils";
@@ -135,6 +135,15 @@ export function QuestCard({ task, onComplete, onDelete, completing, deadline }: 
                                 >
                                     <Clock className="w-3 h-3" />
                                     {isExpired ? "Expirado!" : `até ${deadlineStr}`}
+                                </span>
+                            )}
+                            {task.repeatType && task.repeatType !== 'none' && (
+                                <span className={cn(
+                                    "text-xs px-2 py-0.5 rounded-full font-medium flex items-center gap-1 border whitespace-nowrap shrink-0",
+                                    "bg-purple-500/10 text-purple-400 border-purple-500/20"
+                                )}>
+                                    <Repeat className="w-3 h-3" />
+                                    {task.repeatType === 'daily' ? 'Diário' : 'Semanal'}
                                 </span>
                             )}
                         </div>

@@ -6,6 +6,9 @@ export interface Task {
     difficulty: "easy" | "medium" | "hard";
     xpReward: number;
     completed: boolean;
+    repeatType: "daily" | "weekly" | "none";
+    repeatDays?: string | null;
+    repeatEndsAt?: string | Date | null;
 }
 
 // Basic User

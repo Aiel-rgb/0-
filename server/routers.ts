@@ -179,7 +179,7 @@ export const appRouter = router({
           const buffer = Buffer.from(matches[2], 'base64');
 
           // Ensure directory exists
-          const uploadsDir = path.join(process.cwd(), 'client', 'public', 'uploads');
+          const uploadsDir = path.join(process.cwd(), 'uploads');
           if (!fs.existsSync(uploadsDir)) {
             fs.mkdirSync(uploadsDir, { recursive: true });
           }
@@ -323,7 +323,7 @@ export const appRouter = router({
         const xpPenalties = { easy: 5, medium: 12, hard: 25 };
 
         try {
-          return await createTask(ctx.user.id, {
+          const task = await createTask(ctx.user.id, {
             title: input.title,
             description: input.description,
             difficulty: input.difficulty,
@@ -333,9 +333,14 @@ export const appRouter = router({
             repeatDays: input.repeatDays ? JSON.stringify(input.repeatDays) : null,
             repeatEndsAt: input.repeatEndsAt ? new Date(input.repeatEndsAt) : null,
           });
+
+          if (!task) {
+            throw new Error("Falha ao criar tarefa no banco de dados.");
+          }
+          return task;
         } catch (e) {
-          console.warn("[Tasks] DB unavailable for task creation");
-          return undefined;
+          console.warn("[Tasks] Error creating task:", e);
+          throw new Error("Erro ao criar tarefa. Verifique os logs do servidor.");
         }
       }),
 

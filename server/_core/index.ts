@@ -56,6 +56,15 @@ async function startServer() {
       createContext,
     })
   );
+
+  // Serve uploads specifically from project root
+  const uploadsPath = path.resolve(process.cwd(), "uploads");
+  if (!fs.existsSync(uploadsPath)) {
+    fs.mkdirSync(uploadsPath, { recursive: true });
+  }
+  app.use("/uploads", express.static(uploadsPath));
+  console.log(`[Server] Serving uploads from: ${uploadsPath}`);
+
   // development mode uses Vite, production mode uses static files
   if (process.env.NODE_ENV === "development") {
     await setupVite(app, server);

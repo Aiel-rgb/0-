@@ -8,7 +8,21 @@ export interface VersionNote {
     date: string;
 }
 
+export const CURRENT_VERSION = "2.0.1";
+
 export const PATCH_NOTES: VersionNote[] = [
+    {
+        version: "2.0.1",
+        title: "Personalização & Hábitos",
+        description: "Agora você pode personalizar seu avatar com upload de fotos e criar hábitos recorrentes para sua rotina.",
+        highlights: [
+            "📸 Upload de Avatar: Use sua própria foto no perfil com zoom e corte.",
+            "🔄 Tarefas Recorrentes: Crie hábitos diários ou semanais.",
+            "🐛 Correção no Upload: Fotos agora atualizam instantaneamente.",
+            "🛠️ Melhorias de Estabilidade: Ajustes no sistema de missões."
+        ],
+        date: "2025-02-25"
+    },
     {
         version: "2.0.0",
         title: "A Ascensão do RP8",

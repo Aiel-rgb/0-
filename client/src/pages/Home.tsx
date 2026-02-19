@@ -55,8 +55,8 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
-            <Mountain className="h-8 w-8 text-primary" />
-            <span className="font-display text-xl text-primary">PEAK</span>
+            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-8 w-8 object-contain" />
+            <span className="font-display text-xl text-primary">RP8</span>
           </div>
           <div className="flex items-center gap-4">
             <Button
@@ -96,7 +96,7 @@ export default function Home() {
                 Transforme sua vida em <span className="text-primary text-glow-cyan">75 dias</span>
               </h1>
               <p className="text-lg text-muted-foreground max-w-lg">
-                Gamifique sua rotina, ganhe XP, suba de nível e torne-se a melhor versão de si mesmo. Peak é o app que transforma disciplina em diversão.
+                Gamifique sua rotina, ganhe XP, suba de nível e torne-se a melhor versão de si mesmo. RP8 é o app que transforma disciplina em diversão.
               </p>
             </div>
             <div className="flex flex-col sm:flex-row gap-4">

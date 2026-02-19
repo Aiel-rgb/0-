@@ -134,8 +134,8 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                 <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                     <div className="container flex items-center justify-between py-4">
                         <div className="flex items-center gap-2">
-                            <Mountain className="h-8 w-8 text-primary" />
-                            <span className="font-display text-xl text-primary">PEAK</span>
+                            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-8 w-8 object-contain" />
+                            <span className="font-display text-xl text-primary">RP8</span>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">
                             <ArrowLeft className="h-4 w-4" /> Voltar
@@ -286,8 +286,8 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
             <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                 <div className="container flex items-center justify-between py-4">
                     <div className="flex items-center gap-2">
-                        <Mountain className="h-8 w-8 text-primary" />
-                        <span className="font-display text-xl text-primary">PEAK</span>
+                        <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-8 w-8 object-contain" />
+                        <span className="font-display text-xl text-primary">RP8</span>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">
                         <ArrowLeft className="h-4 w-4" /> Voltar

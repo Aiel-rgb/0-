@@ -48,8 +48,8 @@ export default function Register() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="flex items-center justify-center gap-2 mb-8">
-                    <Mountain className="h-10 w-10 text-primary" />
-                    <span className="font-display text-2xl text-primary">PEAK</span>
+                    <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-10 w-10 object-contain" />
+                    <span className="font-display text-2xl text-primary">RP8</span>
                 </div>
 
                 {/* Register Card */}

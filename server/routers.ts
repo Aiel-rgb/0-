@@ -304,7 +304,7 @@ export const appRouter = router({
         const tasks = await getUserTasks(ctx.user.id);
         return tasks;
       } catch (e) {
-        console.warn("[Tasks] DB unavailable, returning empty list");
+        console.error("[Tasks] List failed:", e);
         return [];
       }
     }),

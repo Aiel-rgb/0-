@@ -245,24 +245,31 @@ export async function getUserTasks(userId: number) {
   const activeTasks = allTasks.filter(task => {
     // 1. Check if repetition ended
     if (task.repeatEndsAt && new Date(task.repeatEndsAt) < today) {
+      console.log(`[TaskDebug] Task ${task.id} filtered: repetition ended`);
       return false;
     }
 
     // 2. Weekly repetition check
     if (task.repeatType === 'weekly') {
-      if (!task.repeatDays) return false;
+      if (!task.repeatDays) {
+        console.log(`[TaskDebug] Task ${task.id} filtered: weekly but no days`);
+        return false;
+      }
       try {
         const days = JSON.parse(task.repeatDays as string);
         if (Array.isArray(days) && !days.includes(currentDayIndex)) {
+          // console.log(`[TaskDebug] Task ${task.id} filtered: wrong day (Task days: ${days}, Today: ${currentDayIndex})`);
           return false;
         }
       } catch (e) {
+        console.log(`[TaskDebug] Task ${task.id} filtered: parsing days failed`);
         return false;
       }
     }
 
     // 3. One-time task check (if completed previously, don't show, unless completed TODAY)
     if (task.repeatType === 'none' && task.isOneTimeCompleted && !completedTaskIds.has(task.id)) {
+      // console.log(`[TaskDebug] Task ${task.id} filtered: one-time completed`);
       return false;
     }
 

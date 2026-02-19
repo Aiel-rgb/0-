@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -14,9 +14,15 @@ import { userProfiles, users, guildMembers, guilds } from "../drizzle/schema";
 export const appRouter = router({
   system: systemRouter,
   auth: router({
-    me: publicProcedure.query(opts => {
+    me: publicProcedure.query(async (opts) => {
       // console.log("Current user:", opts.ctx.user);
-      return opts.ctx.user;
+      if (!opts.ctx.user) return null;
+      try {
+        const freshUser = await getUserByOpenId(opts.ctx.user.openId);
+        return freshUser || opts.ctx.user;
+      } catch (e) {
+        return opts.ctx.user;
+      }
     }),
     logout: publicProcedure.mutation(({ ctx }) => {
       const cookieOptions = getSessionCookieOptions(ctx.req);

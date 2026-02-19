@@ -62,7 +62,7 @@ export function ReleaseNotes({ lastSeenVersion, onClose }: ReleaseNotesProps) {
                             <ScrollText className="w-4 h-4" /> Novidades de Hoy
                         </h4>
                         <div className="grid grid-cols-1 md:grid-cols-2 gap-3">
-                            {latestNote.highlights.map((highlight, i) => (
+                            {latestNote.highlights?.map((highlight, i) => (
                                 <motion.div
                                     key={i}
                                     initial={{ opacity: 0, x: -10 }}

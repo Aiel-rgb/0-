@@ -241,6 +241,7 @@ export const dailyTasks = mysqlTable("dailyTasks", {
   goldReward: int("goldReward").default(25).notNull(),
   category: varchar("category", { length: 64 }).default("health").notNull(),
   active: int("active").default(1).notNull(), // 1 = active, 0 = disabled
+  status: mysqlEnum("status", ["draft", "active", "deleted"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -274,6 +275,7 @@ export const dungeons = mysqlTable("dungeons", {
   startsAt: timestamp("startsAt").notNull(),
   endsAt: timestamp("endsAt").notNull(),
   active: int("active").default(1).notNull(),
+  status: mysqlEnum("status", ["draft", "active", "deleted"]).default("active").notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
 });
 
@@ -292,6 +294,7 @@ export const dungeonMissions = mysqlTable("dungeonMissions", {
   xpReward: int("xpReward").default(100).notNull(),
   goldReward: int("goldReward").default(50).notNull(),
   orderIndex: int("orderIndex").default(0).notNull(),
+  status: mysqlEnum("status", ["draft", "active", "deleted"]).default("active").notNull(),
 });
 
 export type DungeonMission = typeof dungeonMissions.$inferSelect;
@@ -323,3 +326,21 @@ export const userThemes = mysqlTable("userThemes", {
 
 export type UserTheme = typeof userThemes.$inferSelect;
 export type InsertUserTheme = typeof userThemes.$inferInsert;
+
+/**
+ * Shop Items — items available for purchase with gold
+ */
+export const shopItems = mysqlTable("shopItems", {
+  id: varchar("id", { length: 64 }).primaryKey(),
+  name: varchar("name", { length: 256 }).notNull(),
+  description: text("description"),
+  price: int("price").notNull(),
+  category: mysqlEnum("category", ["consumable", "cosmetic"]).notNull(),
+  iconName: varchar("iconName", { length: 64 }).notNull(), // Lucide icon name or emoji
+  status: mysqlEnum("status", ["draft", "active", "deleted"]).default("active").notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type ShopItem = typeof shopItems.$inferSelect;
+export type InsertShopItem = typeof shopItems.$inferInsert;

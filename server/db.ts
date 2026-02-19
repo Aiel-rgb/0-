@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes, userInventory, userCosmetics, userPets, guildUpgrades } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes, userInventory, userCosmetics, userPets, guildUpgrades, shopItems } from "../drizzle/schema";
 import crypto from "crypto";
 import { ENV } from './_core/env';
 
@@ -1058,7 +1058,7 @@ export async function getActiveDailyTasks() {
   const db = await getDb();
   if (!db) return [];
   try {
-    return await db.select().from(dailyTasks).where(eq(dailyTasks.active, 1));
+    return await db.select().from(dailyTasks).where(and(eq(dailyTasks.active, 1), eq(dailyTasks.status, "active")));
   } catch (e) {
     console.warn("[DailyTasks] Failed to get daily tasks:", e);
     return [];
@@ -1126,7 +1126,7 @@ export async function getFriendDailyProgress(friendId: number) {
   try {
     const today = getTodayDateString();
     const [totalResult, completedResult] = await Promise.all([
-      db.select({ count: sql<number>`count(*)` }).from(dailyTasks).where(eq(dailyTasks.active, 1)),
+      db.select({ count: sql<number>`count(*)` }).from(dailyTasks).where(and(eq(dailyTasks.active, 1), eq(dailyTasks.status, "active"))),
       db.select({ count: sql<number>`count(*)` }).from(dailyTaskCompletions)
         .where(and(eq(dailyTaskCompletions.userId, friendId), eq(dailyTaskCompletions.completedDate, today))),
     ]);
@@ -1167,6 +1167,7 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
       .from(dungeons)
       .where(and(
         eq(dungeons.active, 1),
+        eq(dungeons.status, "active"),
         sql`${dungeons.endsAt} >= ${now} `
       ))
       .limit(1);
@@ -1199,6 +1200,7 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
       startsAt,
       endsAt,
       active: 1,
+      status: "active",
     });
 
     const dungeonId = (inserted as any).insertId as number;
@@ -1221,6 +1223,7 @@ export async function getActiveDungeon() {
       .from(dungeons)
       .where(and(
         eq(dungeons.active, 1),
+        eq(dungeons.status, "active"),
         sql`${dungeons.startsAt} <= ${now} `,
         sql`${dungeons.endsAt} >= ${now} `,
       ))
@@ -1788,4 +1791,142 @@ export async function getGuildUpgrades(guildId: number) {
     console.error("[Vault] Failed to get upgrades:", e);
     return [];
   }
+}
+
+// ── Shop System ────────────────────────────────────────
+
+export async function getShopItems(category?: "consumable" | "cosmetic", includeInactive = false) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    let query = db.select().from(shopItems);
+    const conditions = [];
+
+    if (!includeInactive) {
+      conditions.push(eq(shopItems.status, "active"));
+    }
+
+    if (category) {
+      conditions.push(eq(shopItems.category, category));
+    }
+
+    if (conditions.length > 0) {
+      return await query.where(and(...conditions));
+    }
+
+    return await query;
+  } catch (e) {
+    console.error("[Shop] Failed to get shop items:", e);
+    return [];
+  }
+}
+
+// ── Admin & Moderation System ─────────────────────────
+
+export async function adminListDrafts() {
+  const db = await getDb();
+  if (!db) return { tasks: [], dungeons: [], missions: [], items: [] };
+  try {
+    const [tasksDrafts, dungeonsDrafts, missionsDrafts, itemsDrafts] = await Promise.all([
+      db.select().from(dailyTasks).where(eq(dailyTasks.status, "draft")),
+      db.select().from(dungeons).where(eq(dungeons.status, "draft")),
+      db.select().from(dungeonMissions).where(eq(dungeonMissions.status, "draft")),
+      db.select().from(shopItems).where(eq(shopItems.status, "draft")),
+    ]);
+    return {
+      tasks: tasksDrafts,
+      dungeons: dungeonsDrafts,
+      missions: missionsDrafts,
+      items: itemsDrafts,
+    };
+  } catch (e) {
+    console.error("[Admin] Failed to list drafts:", e);
+    return { tasks: [], dungeons: [], missions: [], items: [] };
+  }
+}
+
+export async function adminApproveContent(type: "task" | "dungeon" | "mission" | "item", id: number | string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    if (type === "task") {
+      await db.update(dailyTasks).set({ status: "active", active: 1 }).where(eq(dailyTasks.id, id as number));
+    } else if (type === "dungeon") {
+      await db.update(dungeons).set({ status: "active", active: 1 }).where(eq(dungeons.id, id as number));
+    } else if (type === "mission") {
+      await db.update(dungeonMissions).set({ status: "active" }).where(eq(dungeonMissions.id, id as number));
+    } else if (type === "item") {
+      await db.update(shopItems).set({ status: "active" }).where(eq(shopItems.id, id as string));
+    }
+    return true;
+  } catch (e) {
+    console.error("[Admin] Failed to approve content:", e);
+    return false;
+  }
+}
+
+export async function adminDeleteContent(type: "task" | "dungeon" | "mission" | "item", id: number | string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    if (type === "task") {
+      await db.update(dailyTasks).set({ status: "deleted", active: 0 }).where(eq(dailyTasks.id, id as number));
+    } else if (type === "dungeon") {
+      await db.update(dungeons).set({ status: "deleted", active: 0 }).where(eq(dungeons.id, id as number));
+    } else if (type === "mission") {
+      await db.update(dungeonMissions).set({ status: "deleted" }).where(eq(dungeonMissions.id, id as number));
+    } else if (type === "item") {
+      await db.update(shopItems).set({ status: "deleted" }).where(eq(shopItems.id, id as string));
+    }
+    return true;
+  } catch (e) {
+    console.error("[Admin] Failed to delete content:", e);
+    return false;
+  }
+}
+
+export async function adminCreateDailyTaskDraft(task: any) {
+  const db = await getDb();
+  if (!db) return null;
+  const [inserted] = await db.insert(dailyTasks).values({ ...task, status: "draft", active: 0 });
+  return (inserted as any).insertId;
+}
+
+export async function adminCreateDungeonDraft(dungeon: any, missions: any[]) {
+  const db = await getDb();
+  if (!db) return null;
+  return await db.transaction(async (tx) => {
+    const [inserted] = await tx.insert(dungeons).values({
+      name: dungeon.name,
+      description: dungeon.description,
+      theme: dungeon.theme || "custom",
+      bannerEmoji: dungeon.bannerEmoji,
+      themeRewardId: dungeon.themeRewardId,
+      startsAt: new Date(),
+      endsAt: new Date(Date.now() + 30 * 24 * 60 * 60 * 1000),
+      status: "draft",
+      active: 0
+    });
+    const dungeonId = (inserted as any).insertId;
+    if (missions && missions.length > 0) {
+      await tx.insert(dungeonMissions).values(missions.map(m => ({
+        dungeonId,
+        title: m.title,
+        description: m.description,
+        difficulty: m.difficulty,
+        xpReward: m.xpReward,
+        goldReward: m.goldReward,
+        orderIndex: m.orderIndex,
+        status: "draft" as "draft" | "active" | "deleted"
+      })));
+    }
+    return dungeonId;
+  });
+}
+
+export async function adminCreateShopItemDraft(item: any) {
+  const db = await getDb();
+  if (!db) return null;
+  await db.insert(shopItems).values({ ...item, status: "draft" });
+  return item.id;
 }

@@ -1,9 +1,10 @@
 import { COOKIE_NAME } from "@shared/const";
 import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
-import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
+import { publicProcedure, router, protectedProcedure, adminProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold, getUserPets, grantUserPet, activateUserPet, donateToGuild, buyGuildUpgrade, getGuildUpgrades, getTodayDateString } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold, getUserPets, grantUserPet, activateUserPet, donateToGuild, buyGuildUpgrade, getGuildUpgrades, getTodayDateString, getShopItems, adminListDrafts, adminApproveContent, adminDeleteContent, adminCreateDailyTaskDraft, adminCreateDungeonDraft, adminCreateShopItemDraft } from "./db";
+import { generateDailyTasks, generateMonthlyDungeon, generateShopItems } from "./lib/ai";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -13,6 +14,42 @@ import { userProfiles, users, guildMembers, guilds } from "../drizzle/schema";
 
 export const appRouter = router({
   system: systemRouter,
+  admin: router({
+    listDrafts: adminProcedure.query(async () => {
+      return await adminListDrafts();
+    }),
+    approve: adminProcedure
+      .input(z.object({ type: z.enum(["task", "dungeon", "mission", "item"]), id: z.union([z.number(), z.string()]) }))
+      .mutation(async ({ input }) => {
+        return await adminApproveContent(input.type, input.id);
+      }),
+    delete: adminProcedure
+      .input(z.object({ type: z.enum(["task", "dungeon", "mission", "item"]), id: z.union([z.number(), z.string()]) }))
+      .mutation(async ({ input }) => {
+        return await adminDeleteContent(input.type, input.id);
+      }),
+    generate: adminProcedure
+      .input(z.object({ type: z.enum(["tasks", "dungeon", "items"]), theme: z.string().optional() }))
+      .mutation(async ({ input }) => {
+        if (input.type === "tasks") {
+          const tasks = await generateDailyTasks();
+          for (const t of tasks) {
+            await adminCreateDailyTaskDraft(t);
+          }
+        } else if (input.type === "dungeon" && input.theme) {
+          const dungeon = await generateMonthlyDungeon(input.theme);
+          if (dungeon) {
+            await adminCreateDungeonDraft(dungeon, dungeon.missions);
+          }
+        } else if (input.type === "items") {
+          const items = await generateShopItems();
+          for (const i of items) {
+            await adminCreateShopItemDraft(i);
+          }
+        }
+        return { success: true };
+      }),
+  }),
   auth: router({
     me: publicProcedure.query(async (opts) => {
       // console.log("Current user:", opts.ctx.user);
@@ -708,6 +745,11 @@ export const appRouter = router({
 
   // Shop & Inventory router
   shop: router({
+    listItems: publicProcedure
+      .input(z.object({ category: z.enum(["consumable", "cosmetic"]).optional() }).optional())
+      .query(async ({ input }) => {
+        return await getShopItems(input?.category);
+      }),
     getInventory: protectedProcedure.query(async ({ ctx }) => {
       return await getUserInventory(ctx.user.id);
     }),

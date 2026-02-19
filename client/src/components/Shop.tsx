@@ -9,7 +9,6 @@ import { useTheme } from "@/contexts/ThemeContext";
 import { Inventory, addToInventory } from "./Inventory";
 import { trpc } from "@/lib/trpc";
 
-// ── Types ──────────────────────────────────────────────
 interface ShopItem {
     id: string;
     name: string;
@@ -17,104 +16,9 @@ interface ShopItem {
     price: number;
     icon: React.ReactNode;
     category: "consumable" | "cosmetic";
-    owned: boolean; // only used for cosmetics (one-time purchase)
+    owned: boolean;
 }
 
-// ── Shop Items ─────────────────────────────────────────
-const cosmeticItems: ShopItem[] = [
-    {
-        id: "border-gold",
-        name: "Borda: Dourada",
-        description: "Brilho de um verdadeiro campeão.",
-        price: 500,
-        icon: <Circle className="w-8 h-8 text-yellow-400" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "border-neon",
-        name: "Borda: Neon",
-        description: "Estilo futurista pulsante.",
-        price: 800,
-        icon: <Circle className="w-8 h-8 text-cyan-400" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "border-fire",
-        name: "Borda: Chama",
-        description: "Queime com determinação.",
-        price: 1000,
-        icon: <Flame className="w-8 h-8 text-orange-500" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-cyberpunk",
-        name: "Tema: Cyberpunk",
-        description: "Neon, glitch e alta tecnologia.",
-        price: 2000,
-        icon: <Cpu className="w-8 h-8 text-pink-500" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-dracula",
-        name: "Tema: Drácula",
-        description: "Elegância gótica e cores vibrantes.",
-        price: 1500,
-        icon: <Ghost className="w-8 h-8 text-red-500" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-nordic",
-        name: "Tema: Nórdico",
-        description: "Frio, minimalista e sereno.",
-        price: 1200,
-        icon: <Snowflake className="w-8 h-8 text-cyan-400" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-sunset",
-        name: "Tema: Sunset",
-        description: "Degradê relaxante de fim de tarde.",
-        price: 1200,
-        icon: <Sun className="w-8 h-8 text-orange-400" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-void",
-        name: "Tema: Void",
-        description: "Visual ultra-escuro para o dashboard.",
-        price: 1000,
-        icon: <Palette className="w-8 h-8 text-purple-400" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-forest",
-        name: "Tema: Floresta",
-        description: "Cores da natureza e sons relaxantes.",
-        price: 1000,
-        icon: <Palette className="w-8 h-8 text-green-400" />,
-        category: "cosmetic",
-        owned: false,
-    },
-    {
-        id: "theme-default",
-        name: "Tema: Padrão",
-        description: "O visual clássico da Guilda.",
-        price: 0,
-        icon: <Palette className="w-8 h-8 text-blue-400" />,
-        category: "cosmetic",
-        owned: true,
-    },
-];
-
-// Consumables are bought as many times as desired and go into inventory
 interface ConsumableShopEntry {
     id: string;
     name: string;
@@ -123,62 +27,47 @@ interface ConsumableShopEntry {
     icon: React.ReactNode;
 }
 
-const consumableShopItems: ConsumableShopEntry[] = [
-    {
-        id: "potion-heal",
-        name: "Poção de Cura",
-        description: "Restaura 30 pontos de HP instantaneamente.",
-        price: 300,
-        icon: <Heart className="w-8 h-8 text-red-400" />,
-    },
-    {
-        id: "potion-focus",
-        name: "Poção de Foco",
-        description: "Bônus de +20% XP por 1 hora.",
-        price: 500,
-        icon: <Zap className="w-8 h-8 text-yellow-400" />,
-    },
-    {
-        id: "scroll-gold",
-        name: "Pergaminho Dourado",
-        description: "Ganha 200 Ouro de bônus instantaneamente.",
-        price: 750,
-        icon: <Gem className="w-8 h-8 text-yellow-500" />,
-    },
-    {
-        id: "streak-freeze",
-        name: "Congelar Combo",
-        description: "Protege seu combo se você falhar um dia.",
-        price: 800,
-        icon: <Shield className="w-8 h-8 text-blue-400" />,
-    },
-    {
-        id: "scroll-time",
-        name: "Pergaminho do Tempo",
-        description: "Estende seu combo em +1 dia de proteção.",
-        price: 1000,
-        icon: <Clock className="w-8 h-8 text-purple-400" />,
-    },
-    {
-        id: "elixir-double",
-        name: "Elixir de Poder",
-        description: "Próxima missão concede XP dobrado (30 min).",
-        price: 1200,
-        icon: <Flame className="w-8 h-8 text-orange-400" />,
-    },
-];
+// ── Components & Icons ────────────────────────────────
+const IconMap: Record<string, React.ReactNode> = {
+    "Heart": <Heart className="w-8 h-8 text-red-400" />,
+    "Zap": <Zap className="w-8 h-8 text-yellow-400" />,
+    "Gem": <Gem className="w-8 h-8 text-yellow-500" />,
+    "Shield": <Shield className="w-8 h-8 text-blue-400" />,
+    "Clock": <Clock className="w-8 h-8 text-purple-400" />,
+    "Flame": <Flame className="w-8 h-8 text-orange-400" />,
+    "Circle": <Circle className="w-8 h-8 text-gray-400" />,
+    "Cpu": <Cpu className="w-8 h-8 text-pink-500" />,
+    "Ghost": <Ghost className="w-8 h-8 text-red-500" />,
+    "Snowflake": <Snowflake className="w-8 h-8 text-cyan-400" />,
+    "Sun": <Sun className="w-8 h-8 text-orange-400" />,
+    "Palette": <Palette className="w-8 h-8 text-purple-400" />,
+};
+
+const getIcon = (name: string, itemId: string) => {
+    if (IconMap[name]) return IconMap[name];
+
+    // Fallback based on item ID/Category if icon name fails
+    if (itemId.includes("border")) return <Circle className="w-8 h-8 opacity-50" />;
+    return <FlaskConical className="w-8 h-8 text-muted-foreground" />;
+};
 
 // ── Shop Component ─────────────────────────────────────
 export function Shop({ isAdmin = false }: { isAdmin?: boolean }) {
     const utils = trpc.useUtils();
     const { data: profile } = trpc.profile.getProfile.useQuery();
     const { data: userCosmetics } = trpc.shop.getCosmetics.useQuery();
+    const { data: dbItems, isLoading: loadingItems } = trpc.shop.listItems.useQuery();
 
-    // Cosmetic items state (one-time purchases)
-    const items = cosmeticItems.map(item => ({
+    const items = (dbItems || []).filter(i => i.category === "cosmetic").map(item => ({
         ...item,
+        icon: getIcon(item.iconName, item.id),
         owned: userCosmetics?.some(c => c.cosmeticId === item.id) || item.id === "theme-default"
-    }));
+    })) as ShopItem[];
+
+    const consumableShopItems = (dbItems || []).filter(i => i.category === "consumable").map(item => ({
+        ...item,
+        icon: getIcon(item.iconName, item.id),
+    })) as ConsumableShopEntry[];
 
     const gold = profile?.gold || 0;
     const equippedBorder = userCosmetics?.find(c => c.equipped === 1)?.cosmeticId || null;

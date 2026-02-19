@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck, Swords, PawPrint, MoreVertical, LogOut } from "lucide-react";
+import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck, Swords, PawPrint, MoreVertical, LogOut, Sparkles } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
@@ -374,6 +374,17 @@ export default function Dashboard() {
                 <Users className="mr-2 h-4 w-4" />
                 Amigos
               </Button>
+              {user?.role === 'admin' && (
+                <Button
+                  variant="outline"
+                  size="sm"
+                  onClick={() => setLocation("/admin")}
+                  className="border-amber-500/20 hover:bg-amber-500/10"
+                >
+                  <Sparkles className="mr-2 h-4 w-4 text-amber-500" />
+                  Admin
+                </Button>
+              )}
               <Button
                 variant="ghost"
                 size="sm"
@@ -407,6 +418,11 @@ export default function Dashboard() {
                   <DropdownMenuItem onClick={() => setLocation("/friends")}>
                     <Users className="mr-2 h-4 w-4" /> Amigos
                   </DropdownMenuItem>
+                  {user?.role === 'admin' && (
+                    <DropdownMenuItem onClick={() => setLocation("/admin")}>
+                      <Sparkles className="mr-2 h-4 w-4 text-amber-500" /> Admin
+                    </DropdownMenuItem>
+                  )}
                   <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-destructive focus:text-destructive">
                     <LogOut className="mr-2 h-4 w-4" /> Sair
                   </DropdownMenuItem>

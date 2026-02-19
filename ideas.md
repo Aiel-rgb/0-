@@ -1,4 +1,4 @@
-# Design Ideas: Peak Habit Landing Page
+# Design Ideas: RP8 Landing Page
 
 ## Conceito Selecionado: **Dark Tech Minimalism com Gamification Visual**
 

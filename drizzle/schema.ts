@@ -44,10 +44,40 @@ export const userProfiles = mysqlTable("userProfiles", {
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
   equippedThemeId: varchar("equippedThemeId", { length: 64 }).default("default").notNull(),
   lastSeenVersion: varchar("lastSeenVersion", { length: 32 }).default("0.0.0").notNull(),
+  gold: int("gold").default(0).notNull(),
 });
 
 export type UserProfile = typeof userProfiles.$inferSelect;
 export type InsertUserProfile = typeof userProfiles.$inferInsert;
+
+/**
+ * User inventory for consumables
+ */
+export const userInventory = mysqlTable("userInventory", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  itemId: varchar("itemId", { length: 64 }).notNull(),
+  quantity: int("quantity").default(1).notNull(),
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserInventory = typeof userInventory.$inferSelect;
+export type InsertUserInventory = typeof userInventory.$inferInsert;
+
+/**
+ * User cosmetics (borders, themes)
+ */
+export const userCosmetics = mysqlTable("userCosmetics", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  cosmeticId: varchar("cosmeticId", { length: 64 }).notNull(),
+  equipped: int("equipped").default(0).notNull(), // 0 = false, 1 = true
+  createdAt: timestamp("createdAt").defaultNow().notNull(),
+});
+
+export type UserCosmetic = typeof userCosmetics.$inferSelect;
+export type InsertUserCosmetic = typeof userCosmetics.$inferInsert;
 
 /**
  * Tasks/Habits created by users

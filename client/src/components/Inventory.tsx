@@ -5,6 +5,7 @@ import { Button } from "@/components/ui/button";
 import { toast } from "sonner";
 import { cn } from "@/lib/utils";
 import { useSound } from "@/hooks/use-sound";
+import { trpc } from "@/lib/trpc";
 
 // ── Types ──────────────────────────────────────────────
 export interface InventoryItem {
@@ -83,17 +84,7 @@ export const CONSUMABLE_DEFS: Record<string, {
     },
 };
 
-// ── Helper: load/save inventory ────────────────────────
-function loadInventory(): Record<string, number> {
-    try {
-        return JSON.parse(localStorage.getItem("inventory") || "{}");
-    } catch { return {}; }
-}
-
-function saveInventory(inv: Record<string, number>) {
-    localStorage.setItem("inventory", JSON.stringify(inv));
-}
-
+// ── Helpers ────────────────────────────────────────────
 function loadActiveEffects(): ActiveEffect[] {
     try {
         return JSON.parse(localStorage.getItem("active_effects") || "[]");
@@ -106,21 +97,22 @@ function saveActiveEffects(effects: ActiveEffect[]) {
 
 // ── Inventory Component ────────────────────────────────
 export function Inventory() {
-    const [inventory, setInventory] = useState<Record<string, number>>(loadInventory);
+    const utils = trpc.useUtils();
+    const { data: serverInventory } = trpc.shop.getInventory.useQuery();
+
+    // Convert server array to Record
+    const inventory = (serverInventory || []).reduce((acc, item) => {
+        acc[item.itemId] = item.quantity;
+        return acc;
+    }, {} as Record<string, number>);
+
     const [activeEffects, setActiveEffects] = useState<ActiveEffect[]>(() => {
-        // Filter out expired effects on load
         const now = Date.now();
         return loadActiveEffects().filter(e => e.duration === 0 || (e.activatedAt + e.duration) > now);
     });
-    const [, setTick] = useState(0); // for timer re-renders
-    const { play } = useSound();
 
-    // Listen for inventory changes from Shop
-    useEffect(() => {
-        const handler = () => setInventory(loadInventory());
-        window.addEventListener("inventory-changed", handler);
-        return () => window.removeEventListener("inventory-changed", handler);
-    }, []);
+    const [, setTick] = useState(0);
+    const { play } = useSound();
 
     // Timer for active effects countdown
     useEffect(() => {
@@ -144,15 +136,32 @@ export function Inventory() {
         saveActiveEffects(activeEffects);
     }, [activeEffects]);
 
-    // Persist inventory
-    useEffect(() => {
-        saveInventory(inventory);
-    }, [inventory]);
-
     const isEffectActive = useCallback((id: string) => {
         const now = Date.now();
         return activeEffects.some(e => e.id === id && (e.duration === 0 || (e.activatedAt + e.duration) > now));
     }, [activeEffects]);
+
+    const useItemMutation = trpc.shop.useItem.useMutation({
+        onSuccess: (_, variables) => {
+            const def = CONSUMABLE_DEFS[variables.itemId];
+            if (def && def.duration > 0) {
+                setActiveEffects(prev => [...prev, {
+                    id: variables.itemId,
+                    name: def.name,
+                    activatedAt: Date.now(),
+                    duration: def.duration,
+                }]);
+            }
+            utils.shop.getInventory.invalidate();
+            utils.profile.getProfile.invalidate();
+            play("coin");
+            toast.success("Item usado!", { icon: "✨" });
+        },
+        onError: (err) => {
+            play("error");
+            toast.error(err.message);
+        }
+    });
 
     const useItem = (id: string) => {
         const qty = inventory[id] || 0;
@@ -161,57 +170,13 @@ export function Inventory() {
         const def = CONSUMABLE_DEFS[id];
         if (!def) return;
 
-        // Check if effect is already active (for duration items)
         if (def.duration > 0 && isEffectActive(id)) {
             toast.error("Esse efeito já está ativo!", { icon: "⏳" });
             play("error");
             return;
         }
 
-        // Consume one
-        const newInv = { ...inventory, [id]: qty - 1 };
-        if (newInv[id] <= 0) delete newInv[id];
-        setInventory(newInv);
-
-        // Apply effect
-        if (def.duration > 0) {
-            // Timed effect
-            setActiveEffects(prev => [...prev, {
-                id,
-                name: def.name,
-                activatedAt: Date.now(),
-                duration: def.duration,
-            }]);
-            play("coin");
-            toast.success(`${def.name} ativado!`, {
-                description: def.effectDescription,
-                icon: "✨",
-            });
-        } else {
-            // Instant effect
-            if (id === "potion-heal") {
-                // Restore HP
-                const currentHP = Number(localStorage.getItem("player_hp") || "50");
-                const newHP = Math.min(currentHP + 30, 100);
-                localStorage.setItem("player_hp", String(newHP));
-                window.dispatchEvent(new Event("hp-changed"));
-                play("success");
-                toast.success("HP Restaurado!", {
-                    description: `+30 HP (${newHP}/100)`,
-                    icon: "❤️",
-                });
-            } else if (id === "scroll-gold") {
-                // Add gold
-                const currentGold = Number(localStorage.getItem("shop_gold") || "0");
-                localStorage.setItem("shop_gold", String(currentGold + 200));
-                window.dispatchEvent(new Event("gold-changed"));
-                play("coin");
-                toast.success("Ouro Recebido!", {
-                    description: "+200 Ouro",
-                    icon: "💰",
-                });
-            }
-        }
+        useItemMutation.mutate({ itemId: id });
     };
 
     const formatTime = (ms: number): string => {
@@ -258,7 +223,7 @@ export function Inventory() {
                                 >
                                     {/* Progress bar background */}
                                     <div
-                                        className="absolute inset-0 bg-primary/5 transition-all duration-1000"
+                                        className="absolute inset-0 bg-primary/20 transition-all duration-1000"
                                         style={{ width: `${progress}%` }}
                                     />
                                     <span className="relative z-10">{def?.icon}</span>
@@ -314,11 +279,11 @@ export function Inventory() {
                                         <Button
                                             size="sm"
                                             variant={active ? "secondary" : "default"}
-                                            disabled={active}
+                                            disabled={active || useItemMutation.isPending}
                                             onClick={() => useItem(item.id)}
                                             className="shrink-0 text-xs"
                                         >
-                                            {active ? "Ativo" : "Usar"}
+                                            {active ? "Ativo" : useItemMutation.isPending && useItemMutation.variables?.itemId === item.id ? "..." : "Usar"}
                                         </Button>
                                     </motion.div>
                                 );
@@ -337,10 +302,8 @@ export function Inventory() {
     );
 }
 
-// ── Helper to add items from Shop ──────────────────────
+// ── Legacy helper (placeholder to avoid breakages) ──────
 export function addToInventory(itemId: string, quantity: number = 1) {
-    const inv = loadInventory();
-    inv[itemId] = (inv[itemId] || 0) + quantity;
-    saveInventory(inv);
-    window.dispatchEvent(new Event("inventory-changed"));
+    // This is now legacy, shop handles it directly via TRPC
+    console.warn("Legacy addToInventory called for", itemId);
 }

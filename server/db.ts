@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes, userInventory, userCosmetics } from "../drizzle/schema";
 import crypto from "crypto";
 import { ENV } from './_core/env';
 
@@ -130,6 +130,7 @@ export async function createUserProfile(userId: number): Promise<void> {
       currentLevel: 1,
       xpInCurrentLevel: 0,
       xpNeededForNextLevel: 100,
+      gold: 0,
     });
   } catch (error) {
     console.error("[Database] Failed to create user profile:", error);
@@ -1057,8 +1058,9 @@ export async function completeDailyTask(userId: number, dailyTaskId: number): Pr
     // Record completion
     await db.insert(dailyTaskCompletions).values({ userId, dailyTaskId, completedDate: today });
 
-    // Grant XP
+    // Grant XP and Gold
     await updateUserProgress(userId, task.xpReward);
+    await updateUserGold(userId, task.goldReward);
 
     return { success: true, alreadyDone: false, xpReward: task.xpReward, goldReward: task.goldReward };
   } catch (e) {
@@ -1222,8 +1224,9 @@ export async function completeDungeonMission(
     // Record progress
     await db.insert(dungeonProgress).values({ userId, dungeonId, missionId });
 
-    // Grant XP
+    // Grant XP and Gold
     await updateUserProgress(userId, mission.xpReward);
+    await updateUserGold(userId, mission.goldReward);
 
     // Check if all missions completed → unlock theme
     const allMissions = await getDungeonMissions(dungeonId);
@@ -1302,6 +1305,173 @@ export async function updateLastSeenVersion(userId: number, version: string) {
     return true;
   } catch (e) {
     console.error("[Profile] Failed to update last seen version:", e);
+    return false;
+  }
+}
+
+// Gold, Inventory and Cosmetics
+
+export async function updateUserGold(userId: number, goldChange: number) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const profile = await getUserProfile(userId);
+    if (!profile) return false;
+    const newGold = Math.max(0, profile.gold + goldChange);
+    await db.update(userProfiles).set({ gold: newGold }).where(eq(userProfiles.userId, userId));
+    return true;
+  } catch (e) {
+    console.error("[Gold] Failed to update gold:", e);
+    return false;
+  }
+}
+
+export async function getUserInventory(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(userInventory).where(eq(userInventory.userId, userId));
+  } catch (e) {
+    console.error("[Inventory] Failed to get inventory:", e);
+    return [];
+  }
+}
+
+export async function addToUserInventory(userId: number, itemId: string, quantity: number = 1) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const existing = await db
+      .select()
+      .from(userInventory)
+      .where(and(eq(userInventory.userId, userId), eq(userInventory.itemId, itemId)))
+      .limit(1);
+
+    if (existing.length > 0) {
+      await db
+        .update(userInventory)
+        .set({ quantity: existing[0].quantity + quantity })
+        .where(eq(userInventory.id, existing[0].id));
+    } else {
+      await db.insert(userInventory).values({ userId, itemId, quantity });
+    }
+    return true;
+  } catch (e) {
+    console.error("[Inventory] Failed to add to inventory:", e);
+    return false;
+  }
+}
+
+export async function useUserInventoryItem(userId: number, itemId: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const existing = await db
+      .select()
+      .from(userInventory)
+      .where(and(eq(userInventory.userId, userId), eq(userInventory.itemId, itemId)))
+      .limit(1);
+
+    if (existing.length === 0 || existing[0].quantity <= 0) return false;
+
+    if (existing[0].quantity === 1) {
+      await db.delete(userInventory).where(eq(userInventory.id, existing[0].id));
+    } else {
+      await db
+        .update(userInventory)
+        .set({ quantity: existing[0].quantity - 1 })
+        .where(eq(userInventory.id, existing[0].id));
+    }
+
+    // Apply Effects
+    if (itemId === "scroll-gold") {
+      await updateUserGold(userId, 200);
+    } else if (itemId === "potion-heal") {
+      const profile = await getUserProfile(userId);
+      if (profile) {
+        const newHp = Math.min(100, profile.hp + 30);
+        await db.update(userProfiles).set({ hp: newHp }).where(eq(userProfiles.userId, userId));
+      }
+    }
+    return true;
+  } catch (e) {
+    console.error("[Inventory] Failed to use item:", e);
+    return false;
+  }
+}
+
+export async function getUserCosmetics(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(userCosmetics).where(eq(userCosmetics.userId, userId));
+  } catch (e) {
+    console.error("[Cosmetics] Failed to get cosmetics:", e);
+    return [];
+  }
+}
+
+export async function buyUserCosmetic(userId: number, cosmeticId: string, price: number) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const profile = await getUserProfile(userId);
+    if (!profile || profile.gold < price) return false;
+
+    // Check if already owned
+    const owned = await db
+      .select()
+      .from(userCosmetics)
+      .where(and(eq(userCosmetics.userId, userId), eq(userCosmetics.cosmeticId, cosmeticId)))
+      .limit(1);
+    if (owned.length > 0) return false;
+
+    // Deduct gold and add cosmetic
+    await db.transaction(async (tx) => {
+      await tx.update(userProfiles).set({ gold: profile.gold - price }).where(eq(userProfiles.userId, userId));
+      await tx.insert(userCosmetics).values({ userId, cosmeticId, equipped: 0 });
+    });
+    return true;
+  } catch (e) {
+    console.error("[Cosmetics] Failed to buy cosmetic:", e);
+    return false;
+  }
+}
+
+export async function equipUserCosmetic(userId: number, cosmeticId: string, category: 'border' | 'theme') {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    // For themes, we use the existing equipTheme logic or update it
+    if (category === 'theme') {
+      const themeKey = cosmeticId.replace('theme-', '');
+      return await equipTheme(userId, themeKey);
+    }
+
+    // For borders (stored in userCosmetics)
+    const owned = await db
+      .select()
+      .from(userCosmetics)
+      .where(and(eq(userCosmetics.userId, userId), eq(userCosmetics.cosmeticId, cosmeticId)))
+      .limit(1);
+    if (owned.length === 0) return false;
+
+    await db.transaction(async (tx) => {
+      // Unequip all other borders
+      await tx
+        .update(userCosmetics)
+        .set({ equipped: 0 })
+        .where(and(eq(userCosmetics.userId, userId), sql`cosmeticId LIKE 'border-%'`));
+
+      // Equip this one
+      await tx
+        .update(userCosmetics)
+        .set({ equipped: 1 })
+        .where(and(eq(userCosmetics.userId, userId), eq(userCosmetics.cosmeticId, cosmeticId)));
+    });
+    return true;
+  } catch (e) {
+    console.error("[Cosmetics] Failed to equip cosmetic:", e);
     return false;
   }
 }

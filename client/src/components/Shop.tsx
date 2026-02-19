@@ -7,6 +7,7 @@ import { cn } from "@/lib/utils";
 import { useSound } from "@/hooks/use-sound";
 import { useTheme } from "@/contexts/ThemeContext";
 import { Inventory, addToInventory } from "./Inventory";
+import { trpc } from "@/lib/trpc";
 
 // ── Types ──────────────────────────────────────────────
 interface ShopItem {
@@ -169,94 +170,77 @@ const consumableShopItems: ConsumableShopEntry[] = [
 
 // ── Shop Component ─────────────────────────────────────
 export function Shop({ isAdmin = false }: { isAdmin?: boolean }) {
+    const utils = trpc.useUtils();
+    const { data: profile } = trpc.profile.getProfile.useQuery();
+    const { data: userCosmetics } = trpc.shop.getCosmetics.useQuery();
+
     // Cosmetic items state (one-time purchases)
-    const [items, setItems] = useState<ShopItem[]>(() => {
-        const saved = localStorage.getItem("shop_inventory");
-        if (saved) {
-            const parsed = JSON.parse(saved);
-            return cosmeticItems.map(item => {
-                const savedItem = parsed.find((p: ShopItem) => p.id === item.id);
-                return savedItem ? { ...item, owned: savedItem.owned } : item;
-            });
-        }
-        return cosmeticItems;
-    });
+    const items = cosmeticItems.map(item => ({
+        ...item,
+        owned: userCosmetics?.some(c => c.cosmeticId === item.id) || item.id === "theme-default"
+    }));
 
-    // Gold
-    const [gold, setGold] = useState(() => {
-        return Number(localStorage.getItem("shop_gold")) || 1250;
-    });
-
-    const [equippedBorder, setEquippedBorder] = useState(() => localStorage.getItem("equipped_avatar_frame"));
+    const gold = profile?.gold || 0;
+    const equippedBorder = userCosmetics?.find(c => c.equipped === 1)?.cosmeticId || null;
     const [shopTab, setShopTab] = useState<"consumables" | "cosmetics">("consumables");
 
     const { play } = useSound();
     const { theme, setTheme } = useTheme();
 
-    // Persist cosmetic state
-    useEffect(() => {
-        localStorage.setItem("shop_inventory", JSON.stringify(items));
-    }, [items]);
+    // Mutations
+    const buyConsumableMutation = trpc.shop.buyConsumable.useMutation({
+        onSuccess: () => {
+            utils.profile.getProfile.invalidate();
+            utils.shop.getInventory.invalidate();
+            play("coin");
+            toast.success("Compra realizada!", { icon: "🛍️" });
+        },
+        onError: (err) => {
+            play("error");
+            toast.error(err.message);
+        }
+    });
 
-    // Persist gold
-    useEffect(() => {
-        localStorage.setItem("shop_gold", String(gold));
-    }, [gold]);
+    const buyCosmeticMutation = trpc.shop.buyCosmetic.useMutation({
+        onSuccess: () => {
+            utils.profile.getProfile.invalidate();
+            utils.shop.getCosmetics.invalidate();
+            play("coin");
+            toast.success("Cosmético adquirido!", { icon: "✨" });
+        },
+        onError: (err) => {
+            play("error");
+            toast.error(err.message);
+        }
+    });
 
-    // Persist border
-    useEffect(() => {
-        if (equippedBorder) localStorage.setItem("equipped_avatar_frame", equippedBorder);
-    }, [equippedBorder]);
+    const equipCosmeticMutation = trpc.shop.equipCosmetic.useMutation({
+        onSuccess: () => {
+            utils.shop.getCosmetics.invalidate();
+            utils.profile.getProfile.invalidate();
+            play("click");
+            toast.success("Equipado com sucesso!");
+        },
+        onError: (err) => toast.error(err.message)
+    });
 
-    // Listen for gold changes from Inventory (e.g. scroll-gold use)
-    useEffect(() => {
-        const handler = () => {
-            setGold(Number(localStorage.getItem("shop_gold")) || 0);
-        };
-        window.addEventListener("gold-changed", handler);
-        return () => window.removeEventListener("gold-changed", handler);
-    }, []);
-
-    // ── Consumable purchase: deduct gold, add to inventory ──
     const handleBuyConsumable = (item: ConsumableShopEntry) => {
         if (gold >= item.price) {
-            const newGold = gold - item.price;
-            setGold(newGold);
-            localStorage.setItem("shop_gold", String(newGold));
-            addToInventory(item.id);
-            play("coin");
-            toast.success(`Comprou: ${item.name}!`, { icon: "🛍️" });
+            buyConsumableMutation.mutate({ itemId: item.id, price: item.price });
         } else {
             play("error");
             toast.error("Ouro insuficiente!", { icon: "🚫" });
         }
     };
 
-    // ── Cosmetic purchase: mark as owned ──
     const handleBuyCosmetic = (item: ShopItem) => {
         if (item.owned) return;
         if (gold >= item.price) {
-            setGold(prev => prev - item.price);
-            setItems(prev => prev.map(i => i.id === item.id ? { ...i, owned: true } : i));
-            play("coin");
-            toast.success(`Comprou: ${item.name}!`, { icon: "🛍️" });
+            buyCosmeticMutation.mutate({ cosmeticId: item.id, price: item.price });
         } else {
             play("error");
             toast.error("Ouro insuficiente!", { icon: "🚫" });
         }
-    };
-
-    const getShopItemBorder = (itemId: string) => {
-        if (itemId === "border-gold") return "border-yellow-500/50 hover:border-yellow-400";
-        if (itemId === "border-neon") return "border-cyan-400/50 hover:border-cyan-300";
-        if (itemId === "border-fire") return "border-orange-500/50 hover:border-orange-400";
-        if (itemId === "theme-cyberpunk") return "border-pink-500/50 hover:border-pink-400";
-        if (itemId === "theme-dracula") return "border-purple-600/50 hover:border-purple-500";
-        if (itemId === "theme-nordic") return "border-blue-300/50 hover:border-blue-200";
-        if (itemId === "theme-sunset") return "border-orange-400/50 hover:border-orange-300";
-        if (itemId === "theme-void") return "border-slate-800/50 hover:border-slate-600";
-        if (itemId === "theme-forest") return "border-green-600/50 hover:border-green-500";
-        return "border-border hover:border-primary/50";
     };
 
     const handleEquip = (item: ShopItem) => {
@@ -264,29 +248,36 @@ export function Shop({ isAdmin = false }: { isAdmin?: boolean }) {
         if (item.id.startsWith("theme-")) {
             const themeName = item.id.replace("theme-", "");
             const target = themeName === "default" ? "dark" : themeName;
+
+            equipCosmeticMutation.mutate({ cosmeticId: item.id, category: 'theme' });
             setTheme(target as any);
-            play("click");
-            toast.success(`Tema aplicado: ${item.name}`, { icon: "🎨" });
         } else if (item.id.startsWith("border-")) {
-            setEquippedBorder(item.id);
-            localStorage.setItem("equipped_avatar_frame", item.id);
-            window.dispatchEvent(new Event("avatar_frame_updated"));
-            play("click");
-            toast.success(`Borda equipada: ${item.name}`, { icon: "✨" });
+            equipCosmeticMutation.mutate({ cosmeticId: item.id, category: 'border' });
         }
     };
 
     const isEquipped = (item: ShopItem) => {
         if (item.category !== "cosmetic") return false;
         if (item.id.startsWith("theme-")) {
-            const themeName = item.id.replace("theme-", "");
-            if (themeName === "default") return theme === "dark" || theme === "light";
-            return theme === themeName;
+            return profile?.equippedThemeId === item.id.replace("theme-", "");
         }
         if (item.id.startsWith("border-")) {
             return equippedBorder === item.id;
         }
         return false;
+    };
+
+    const getShopItemBorder = (itemId: string) => {
+        if (itemId === "border-gold") return "border-yellow-500/50 hover:border-yellow-400 text-yellow-500";
+        if (itemId === "border-neon") return "border-cyan-400/50 hover:border-cyan-300 text-cyan-400";
+        if (itemId === "border-fire") return "border-orange-500/50 hover:border-orange-400 text-orange-500";
+        if (itemId === "theme-cyberpunk") return "border-pink-500/50 hover:border-pink-400 text-pink-500";
+        if (itemId === "theme-dracula") return "border-purple-600/50 hover:border-purple-500 text-purple-500";
+        if (itemId === "theme-nordic") return "border-blue-300/50 hover:border-blue-200 text-blue-300";
+        if (itemId === "theme-sunset") return "border-orange-400/50 hover:border-orange-300 text-orange-400";
+        if (itemId === "theme-void") return "border-slate-800/50 hover:border-slate-600 text-slate-800";
+        if (itemId === "theme-forest") return "border-green-600/50 hover:border-green-500 text-green-600";
+        return "border-border hover:border-primary/50";
     };
 
     return (
@@ -303,16 +294,6 @@ export function Shop({ isAdmin = false }: { isAdmin?: boolean }) {
                         <span className="text-2xl font-display font-bold text-yellow-400">{gold} Ouro</span>
                     </div>
                 </div>
-                {isAdmin && (
-                    <Button variant="ghost" size="sm" className="relative z-10 text-xs" onClick={() => {
-                        setGold(g => g + 500);
-                        localStorage.setItem("shop_gold", String(gold + 500));
-                        play("coin");
-                        toast.success("+500 Ouro (Admin)");
-                    }}>
-                        Ganhar mais
-                    </Button>
-                )}
             </div>
 
             {/* Inventory Section */}

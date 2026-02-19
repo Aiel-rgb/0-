@@ -38,15 +38,18 @@ export default function Home() {
   };
 
   const handleViewDemo = () => {
-    toast.info("Demo em breve", {
-      description: "Confira em breve um vídeo demonstrativo do app.",
-    });
+    // Scroll to features or dashboard
+    const features = document.getElementById("features");
+    if (features) {
+      features.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   const handleLearnMore = () => {
-    toast.info("Saiba mais", {
-      description: "Acesse nosso blog para conteúdo exclusivo sobre hábitos.",
-    });
+    const about = document.getElementById("about");
+    if (about) {
+      about.scrollIntoView({ behavior: "smooth" });
+    }
   };
 
   return (

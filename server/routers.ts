@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -134,6 +134,7 @@ export const appRouter = router({
         updatedAt: new Date(),
         equippedThemeId: "default",
         lastSeenVersion: "0.0.0",
+        gold: 0,
       };
     }),
 
@@ -160,6 +161,7 @@ export const appRouter = router({
           updatedAt: new Date(),
           equippedThemeId: "default",
           lastSeenVersion: "0.0.0",
+          gold: 0,
         };
       }),
 
@@ -701,6 +703,52 @@ export const appRouter = router({
         if (result.alreadyDone) throw new Error("Missão já concluída!");
         if (!result.success) throw new Error("Erro ao completar missão da dungeon.");
         return result;
+      }),
+  }),
+
+  // Shop & Inventory router
+  shop: router({
+    getInventory: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserInventory(ctx.user.id);
+    }),
+
+    getCosmetics: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserCosmetics(ctx.user.id);
+    }),
+
+    buyConsumable: protectedProcedure
+      .input(z.object({ itemId: z.string(), price: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const profile = await getUserProfile(ctx.user.id);
+        if (!profile || profile.gold < input.price) throw new Error("Ouro insuficiente");
+
+        await updateUserGold(ctx.user.id, -input.price);
+        await addToUserInventory(ctx.user.id, input.itemId);
+        return { success: true };
+      }),
+
+    buyCosmetic: protectedProcedure
+      .input(z.object({ cosmeticId: z.string(), price: z.number() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await buyUserCosmetic(ctx.user.id, input.cosmeticId, input.price);
+        if (!success) throw new Error("Falha ao comprar cosmético");
+        return { success };
+      }),
+
+    useItem: protectedProcedure
+      .input(z.object({ itemId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await useUserInventoryItem(ctx.user.id, input.itemId);
+        if (!success) throw new Error("Item não encontrado ou erro ao usar");
+        return { success };
+      }),
+
+    equipCosmetic: protectedProcedure
+      .input(z.object({ cosmeticId: z.string(), category: z.enum(['border', 'theme']) }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await equipUserCosmetic(ctx.user.id, input.cosmeticId, input.category);
+        if (!success) throw new Error("Erro ao equipar cosmético");
+        return { success };
       }),
   }),
 });

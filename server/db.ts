@@ -41,6 +41,27 @@ export async function getDb() {
   return _db;
 }
 
+// ── Timezone Helpers (BRL: UTC-3) ────────────────────────
+export function getAdjustedDate() {
+  const now = new Date();
+  // Brazil is UTC-3. We adjust the date to reflect local time for midnight calculations.
+  // This is a simple offset adjustment for server-side consistency.
+  const BRL_OFFSET = -3;
+  const utc = now.getTime() + (now.getTimezoneOffset() * 60000);
+  return new Date(utc + (3600000 * BRL_OFFSET));
+}
+
+export function getTodayMidnight() {
+  const adjusted = getAdjustedDate();
+  adjusted.setHours(0, 0, 0, 0);
+  return adjusted;
+}
+
+export function getTodayDateString() {
+  const adjusted = getAdjustedDate();
+  return adjusted.toISOString().split("T")[0];
+}
+
 export async function upsertUser(user: InsertUser): Promise<void> {
   if (!user.openId) {
     throw new Error("User openId is required for upsert");
@@ -188,10 +209,9 @@ export async function updateUserProgress(userId: number, xpGain: number): Promis
       xpNeeded = Math.floor(100 * (1.1 ** (newLevel - 1)));
     }
 
-    // streak logic
-    const now = new Date();
-    // Use UTC for consistency
-    const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+    // streak logic - uses adjusted local time
+    const today = getTodayMidnight();
+    const now = getAdjustedDate();
 
     let newStreak = profile.streak;
     let newLastUpdate = profile.lastStreakUpdate;
@@ -270,9 +290,8 @@ export async function getUserTasks(userId: number) {
   // Get all tasks for the user
   const allTasks = await db.select().from(tasks).where(eq(tasks.userId, userId));
 
-  // Get today's completions
-  const today = new Date();
-  today.setHours(0, 0, 0, 0);
+  // Get today's completions (adjusted timezone)
+  const today = getTodayMidnight();
 
   const completions = await db.select()
     .from(taskCompletions)
@@ -385,8 +404,7 @@ export async function completeTask(taskId: number, userId: number, xpGained: num
   if (!db) return false;
   try {
     // Check if already completed today
-    const today = new Date();
-    today.setHours(0, 0, 0, 0);
+    const today = getTodayMidnight();
 
     const existingCompletion = await db.select()
       .from(taskCompletions)
@@ -1065,7 +1083,7 @@ export async function completeDailyTask(userId: number, dailyTaskId: number): Pr
   const db = await getDb();
   if (!db) return { success: false, alreadyDone: false, xpReward: 0, goldReward: 0 };
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayDateString();
 
     // Check if already completed today
     const existing = await db
@@ -1106,7 +1124,7 @@ export async function getFriendDailyProgress(friendId: number) {
   const db = await getDb();
   if (!db) return { completed: 0, total: 0 };
   try {
-    const today = new Date().toISOString().split("T")[0];
+    const today = getTodayDateString();
     const [totalResult, completedResult] = await Promise.all([
       db.select({ count: sql<number>`count(*)` }).from(dailyTasks).where(eq(dailyTasks.active, 1)),
       db.select({ count: sql<number>`count(*)` }).from(dailyTaskCompletions)
@@ -1145,7 +1163,7 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
     // Check for ACTIVE dungeon in CURRENT month
     const now = new Date();
     const existing = await db
-      .select({ id: dungeons.id })
+      .select()
       .from(dungeons)
       .where(and(
         eq(dungeons.active, 1),
@@ -1153,11 +1171,21 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
       ))
       .limit(1);
 
-    if (existing.length > 0) return;
+    if (existing.length > 0) {
+      // Fix: If existing dungeon has less than 28 days total duration, update it to end of month
+      const dungeon = existing[0];
+      const diffDays = Math.floor((dungeon.endsAt.getTime() - dungeon.startsAt.getTime()) / (1000 * 60 * 60 * 24));
+      if (diffDays < 28) {
+        console.log("[Dungeon] Updating existing dungeon duration to 1 month");
+        const newEndsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+        await db.update(dungeons).set({ endsAt: newEndsAt }).where(eq(dungeons.id, dungeon.id));
+      }
+      return;
+    }
 
-    // Dungeon runs for the current month
+    // Dungeon runs for the current calendar month
     const startsAt = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
+    const endsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // Last day of month
 
     const [inserted] = await db.insert(dungeons).values({
       name: "Dungeon Astral",

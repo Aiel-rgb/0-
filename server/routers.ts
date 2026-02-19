@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold, getUserPets, grantUserPet, activateUserPet, donateToGuild, buyGuildUpgrade, getGuildUpgrades } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold, getUserPets, grantUserPet, activateUserPet, donateToGuild, buyGuildUpgrade, getGuildUpgrades, getTodayDateString } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -653,7 +653,7 @@ export const appRouter = router({
   dailyTasks: router({
     list: protectedProcedure.query(async ({ ctx }) => {
       await seedDailyTasksIfEmpty();
-      const today = new Date().toISOString().split("T")[0];
+      const today = getTodayDateString();
       const [tasks, completions] = await Promise.all([
         getActiveDailyTasks(),
         getUserDailyCompletions(ctx.user.id, today),

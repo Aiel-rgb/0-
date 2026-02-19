@@ -1,9 +1,10 @@
 import { useAuth } from "@/_core/hooks/useAuth";
 import { Button } from "@/components/ui/button";
 import { Card } from "@/components/ui/card";
-import { ArrowRight, Zap, Target, Flame, BookOpen, Brain, Mountain, Trophy } from "lucide-react";
+import { ArrowRight, Zap, Target, Flame, BookOpen, Brain, Mountain, Trophy, Menu } from "lucide-react";
 import { useRef } from "react";
 import { toast } from "sonner";
+import { Sheet, SheetContent, SheetTrigger, SheetTitle, SheetHeader } from "@/components/ui/sheet";
 
 /**
  * RP8 Landing Page
@@ -58,10 +59,12 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
-            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
+            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-16 h-16 md:w-28 md:h-28 object-contain" />
             <span className="font-display text-xl text-primary">RP8</span>
           </div>
-          <div className="flex items-center gap-4">
+
+          {/* Desktop Navigation */}
+          <div className="hidden md:flex items-center gap-4">
             <Button
               variant="ghost"
               size="sm"
@@ -86,6 +89,47 @@ export default function Home() {
               Baixar App
             </Button>
           </div>
+
+          {/* Mobile Navigation */}
+          <div className="md:hidden">
+            <Sheet>
+              <SheetTrigger asChild>
+                <Button variant="ghost" size="icon" className="text-foreground">
+                  <Menu className="h-6 w-6" />
+                </Button>
+              </SheetTrigger>
+              <SheetContent side="right" className="bg-background/95 border-border">
+                <SheetHeader className="text-left">
+                  <SheetTitle className="font-display text-primary">Navegação</SheetTitle>
+                </SheetHeader>
+                <div className="flex flex-col gap-6 mt-8">
+                  <button
+                    onClick={() => {
+                      scrollToSection(recursosRef);
+                      // Sheet closure is automatic on some implementations if nested buttons are used, 
+                      // but here we might need a reference or just use a Link if using wouter/router.
+                      // For now, simpler buttons.
+                    }}
+                    className="text-left text-lg font-display hover:text-primary transition-colors"
+                  >
+                    Recursos
+                  </button>
+                  <button
+                    onClick={() => scrollToSection(stackRef)}
+                    className="text-left text-lg font-display hover:text-primary transition-colors"
+                  >
+                    Stack Técnico
+                  </button>
+                  <Button
+                    className="w-full bg-primary text-primary-foreground hover:bg-primary/90 glow-cyan"
+                    onClick={handleDownloadApp}
+                  >
+                    Baixar App
+                  </Button>
+                </div>
+              </SheetContent>
+            </Sheet>
+          </div>
         </div>
       </nav>
 
@@ -95,10 +139,10 @@ export default function Home() {
         <div className="container relative grid md:grid-cols-2 gap-12 items-center">
           <div className="space-y-6">
             <div className="space-y-4">
-              <h1 className="text-5xl md:text-6xl font-display leading-tight">
+              <h1 className="text-4xl md:text-6xl font-display leading-tight">
                 Transforme sua vida em <span className="text-primary text-glow-cyan">75 dias</span>
               </h1>
-              <p className="text-lg text-muted-foreground max-w-lg">
+              <p className="text-base md:text-lg text-muted-foreground max-w-lg">
                 Gamifique sua rotina, ganhe XP, suba de nível e torne-se a melhor versão de si mesmo. RP8 é o app que transforma disciplina em diversão.
               </p>
             </div>
@@ -119,18 +163,18 @@ export default function Home() {
                 Ver Demo
               </Button>
             </div>
-            <div className="flex gap-8 pt-4">
+            <div className="grid grid-cols-3 gap-4 md:gap-8 pt-4">
               <div>
-                <p className="text-primary font-display text-2xl">75</p>
-                <p className="text-sm text-muted-foreground">Dias de Transformação</p>
+                <p className="text-primary font-display text-xl md:text-2xl">75</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Dias de Transformação</p>
               </div>
               <div>
-                <p className="text-primary font-display text-2xl">10</p>
-                <p className="text-sm text-muted-foreground">Níveis para Desbloquear</p>
+                <p className="text-primary font-display text-xl md:text-2xl">10</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Níveis</p>
               </div>
               <div>
-                <p className="text-primary font-display text-2xl">15+</p>
-                <p className="text-sm text-muted-foreground">Hábitos Científicos</p>
+                <p className="text-primary font-display text-xl md:text-2xl">15+</p>
+                <p className="text-xs md:text-sm text-muted-foreground">Hábitos</p>
               </div>
             </div>
           </div>

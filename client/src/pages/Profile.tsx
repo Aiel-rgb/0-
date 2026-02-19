@@ -228,7 +228,7 @@ export default function Profile() {
 
       {/* Main Content — Dashboard Layout */}
       <main className="container py-8 max-w-7xl">
-        <div className="grid grid-cols-1 lg:grid-cols-[320px_1fr] gap-8">
+        <div className="grid grid-cols-1 xl:grid-cols-[320px_1fr] gap-8">
 
           {/* ═══ LEFT SIDEBAR — Profile ═══ */}
           <motion.aside

@@ -149,22 +149,23 @@ export function QuestCard({ task, onComplete, onDelete, completing, deadline }: 
                         </div>
                     </div>
 
-                    <div className="flex flex-col gap-2">
+                    <div className="flex flex-row md:flex-col items-center md:items-end gap-2 shrink-0">
                         {!task.completed && (
                             <Button
                                 variant="default"
                                 size="sm"
-                                className="bg-primary hover:bg-primary/80 text-primary-foreground font-bold shadow-[0_0_10px_rgba(0,217,255,0.3)]"
+                                className="bg-primary hover:bg-primary/80 text-primary-foreground font-bold shadow-[0_0_10px_rgba(0,217,255,0.3)] h-9 md:h-8"
                                 onClick={() => onComplete(task.id)}
                                 disabled={completing}
                             >
-                                Completar
+                                <span className="hidden sm:inline">Completar</span>
+                                <Check className="w-4 h-4 sm:hidden" />
                             </Button>
                         )}
                         <Button
                             variant="ghost"
                             size="icon"
-                            className="text-muted-foreground hover:text-destructive transition-colors h-8 w-8"
+                            className="text-muted-foreground hover:text-destructive transition-colors h-9 w-9 md:h-8 md:w-8"
                             onClick={() => onDelete(task.id)}
                         >
                             <Trash2 className="w-4 h-4" />

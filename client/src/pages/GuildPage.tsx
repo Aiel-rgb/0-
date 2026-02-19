@@ -142,7 +142,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                 <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                     <div className="container flex items-center justify-between py-4">
                         <div className="flex items-center gap-2">
-                            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
+                            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-16 h-16 md:w-28 md:h-28 object-contain" />
                             <span className="font-display text-xl text-primary">RP8</span>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">
@@ -156,7 +156,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                     <motion.div
                         initial={{ opacity: 0, y: -20 }}
                         animate={{ opacity: 1, y: 0 }}
-                        className="relative bg-gradient-to-br from-primary/10 via-card/50 to-purple-600/10 border border-primary/20 rounded-2xl p-8 overflow-hidden"
+                        className="relative bg-gradient-to-br from-primary/10 via-card/50 to-purple-600/10 border border-primary/20 rounded-2xl p-6 md:p-8 overflow-hidden"
                     >
                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
                         <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
@@ -197,21 +197,21 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                                     )}
                                 </div>
                                 <div>
-                                    <h1 className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">
+                                    <h1 className="text-2xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">
                                         {myGuild.name}
                                     </h1>
                                     {myGuild.description && (
-                                        <p className="text-muted-foreground mt-1">{myGuild.description}</p>
+                                        <p className="text-sm md:text-base text-muted-foreground mt-1">{myGuild.description}</p>
                                     )}
-                                    <div className="flex items-center gap-4 mt-2 text-sm">
+                                    <div className="flex flex-wrap items-center gap-2 md:gap-4 mt-2 text-xs md:text-sm">
                                         <span className="flex items-center gap-1 text-yellow-400">
-                                            <Zap className="w-4 h-4" /> {myGuild.totalXp} XP
+                                            <Zap className="w-3 md:w-4 h-3 md:h-4" /> {myGuild.totalXp} XP
                                         </span>
                                         <span className="flex items-center gap-1 text-red-400">
-                                            <Swords className="w-4 h-4" /> {myGuild.totalRaidsCompleted} Raids
+                                            <Swords className="w-3 md:w-4 h-3 md:h-4" /> {myGuild.totalRaidsCompleted} Raids
                                         </span>
                                         <span className="flex items-center gap-1 text-blue-400">
-                                            <Users className="w-4 h-4" /> {members.length} Membros
+                                            <Users className="w-3 md:w-4 h-3 md:h-4" /> {members.length} Membros
                                         </span>
                                     </div>
                                 </div>
@@ -240,13 +240,13 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                         )}
                     </motion.div>
 
-                    <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-                        {/* Members */}
+                    <div className="flex flex-col-reverse lg:grid lg:grid-cols-3 gap-8">
+                        {/* Members (Moved below on mobile) */}
                         <div className="lg:col-span-1 space-y-4">
                             <h2 className="text-xl font-display font-bold flex items-center gap-2">
                                 <Users className="w-5 h-5 text-primary" /> Membros
                             </h2>
-                            <div className="space-y-2">
+                            <div className="space-y-2 max-h-[400px] overflow-y-auto pr-2 scrollbar-hide">
                                 {members.map((member: any) => (
                                     <motion.div
                                         key={member.id}
@@ -274,7 +274,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                             </div>
                         </div>
 
-                        {/* Raids */}
+                        {/* Raids (Top on mobile) */}
                         <div className="lg:col-span-2 space-y-4">
                             <div className="flex items-center justify-between">
                                 <h2 className="text-xl font-display font-bold flex items-center gap-2">

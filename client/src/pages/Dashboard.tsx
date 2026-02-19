@@ -3,7 +3,7 @@ import { useLocation } from "wouter";
 import { toast } from "sonner";
 import { useQueryClient } from "@tanstack/react-query";
 import { AnimatePresence, motion } from "framer-motion";
-import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck, Swords, PawPrint } from "lucide-react";
+import { DoorOpen, BarChart3, ScrollText, Compass, Gem, Trophy, List, Activity, Shield, Users, CalendarCheck, Swords, PawPrint, MoreVertical, LogOut } from "lucide-react";
 import confetti from "canvas-confetti";
 
 import { Button } from "@/components/ui/button";
@@ -21,6 +21,7 @@ import { ReleaseNotes } from "@/components/ReleaseNotes";
 import { PetDashboard } from "@/components/PetDashboard";
 import { GuildVault } from "@/components/GuildVault";
 import { Skeleton } from "@/components/ui/skeleton";
+import { DropdownMenu, DropdownMenuContent, DropdownMenuItem, DropdownMenuTrigger } from "@/components/ui/dropdown-menu";
 
 import { trpc } from "@/lib/trpc";
 import { getRankName } from "@/components/LevelAvatar";
@@ -333,56 +334,85 @@ export default function Dashboard() {
             <p className="text-muted-foreground">Sua jornada diária começa aqui.</p>
           </div>
           <div className="flex items-center gap-2">
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => {
-                // Find all dialogs and triggers if any, but ReleaseNotes uses a custom flag system
-                // Actually, ReleaseNotes.tsx shows based on version. 
-                // I need to add a way to force-open it.
-                window.dispatchEvent(new CustomEvent("open-release-notes"));
-              }}
-              className="border-blue-500/20 hover:bg-blue-500/10"
-            >
-              <ScrollText className="mr-2 h-4 w-4" />
-              Patch Notes
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setShowStats(!showStats)}
-              className="border-primary/20 hover:bg-primary/10"
-            >
-              <BarChart3 className="mr-2 h-4 w-4" />
-              {showStats ? "Ver Missões" : "Estatísticas"}
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/guild")}
-              className="border-purple-500/20 hover:bg-purple-500/10"
-            >
-              <Shield className="mr-2 h-4 w-4" />
-              Guilda
-            </Button>
-            <Button
-              variant="outline"
-              size="sm"
-              onClick={() => setLocation("/friends")}
-              className="border-green-500/20 hover:bg-green-500/10"
-            >
-              <Users className="mr-2 h-4 w-4" />
-              Amigos
-            </Button>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={() => logoutMutation.mutate()}
-              className="text-destructive hover:text-destructive hover:bg-destructive/10"
-            >
-              <DoorOpen className="mr-2 h-4 w-4" />
-              Sair
-            </Button>
+            {/* Desktop Actions */}
+            <div className="hidden md:flex items-center gap-2">
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => {
+                  window.dispatchEvent(new CustomEvent("open-release-notes"));
+                }}
+                className="border-blue-500/20 hover:bg-blue-500/10"
+              >
+                <ScrollText className="mr-2 h-4 w-4" />
+                Patch Notes
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setShowStats(!showStats)}
+                className="border-primary/20 hover:bg-primary/10"
+              >
+                <BarChart3 className="mr-2 h-4 w-4" />
+                {showStats ? "Ver Missões" : "Estatísticas"}
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/guild")}
+                className="border-purple-500/20 hover:bg-purple-500/10"
+              >
+                <Shield className="mr-2 h-4 w-4" />
+                Guilda
+              </Button>
+              <Button
+                variant="outline"
+                size="sm"
+                onClick={() => setLocation("/friends")}
+                className="border-green-500/20 hover:bg-green-500/10"
+              >
+                <Users className="mr-2 h-4 w-4" />
+                Amigos
+              </Button>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={() => logoutMutation.mutate()}
+                className="text-destructive hover:text-destructive hover:bg-destructive/10"
+              >
+                <DoorOpen className="mr-2 h-4 w-4" />
+                Sair
+              </Button>
+            </div>
+
+            {/* Mobile Actions Menu */}
+            <div className="md:hidden">
+              <DropdownMenu>
+                <DropdownMenuTrigger asChild>
+                  <Button variant="outline" size="sm" className="border-primary/20">
+                    <MoreVertical className="h-4 w-4 mr-1" />
+                    Menu
+                  </Button>
+                </DropdownMenuTrigger>
+                <DropdownMenuContent align="end" className="w-48 bg-card/95 border-border">
+                  <DropdownMenuItem onClick={() => window.dispatchEvent(new CustomEvent("open-release-notes"))}>
+                    <ScrollText className="mr-2 h-4 w-4" /> Patch Notes
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setShowStats(!showStats)}>
+                    <BarChart3 className="mr-2 h-4 w-4" /> {showStats ? "Ver Missões" : "Estatísticas"}
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/guild")}>
+                    <Shield className="mr-2 h-4 w-4" /> Guilda
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => setLocation("/friends")}>
+                    <Users className="mr-2 h-4 w-4" /> Amigos
+                  </DropdownMenuItem>
+                  <DropdownMenuItem onClick={() => logoutMutation.mutate()} className="text-destructive focus:text-destructive">
+                    <LogOut className="mr-2 h-4 w-4" /> Sair
+                  </DropdownMenuItem>
+                </DropdownMenuContent>
+              </DropdownMenu>
+            </div>
           </div>
         </header>
 
@@ -400,13 +430,13 @@ export default function Dashboard() {
 
           {/* Quest Board / Map / Shop (2/3 width) */}
           <div className="lg:col-span-2 space-y-6">
-            <div className="flex items-center justify-between">
+            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <h2 className="text-xl font-display font-bold flex items-center gap-2">
                 {getHeaderIcon()}
                 {getHeaderTitle()}
               </h2>
 
-              <div className="flex gap-2">
+              <div className="flex items-center gap-2 overflow-x-auto pb-2 sm:pb-0 scrollbar-hide">
                 {!showStats && (
                   <>
                     {viewMode === "achievements" ? (
@@ -414,17 +444,17 @@ export default function Dashboard() {
                         variant="ghost"
                         size="sm"
                         onClick={() => setViewMode("list")}
-                        className="text-muted-foreground hover:text-foreground"
+                        className="text-muted-foreground hover:text-foreground shrink-0"
                       >
                         <List className="mr-2 h-4 w-4" />
                         Voltar
                       </Button>
                     ) : (
-                      <div className="bg-muted/50 backdrop-blur-sm p-1 rounded-xl flex gap-1 border border-border/50">
+                      <div className="bg-muted/50 backdrop-blur-sm p-1 rounded-xl flex gap-1 border border-border/50 shrink-0">
                         <Button
                           variant={viewMode === "list" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("list")}
                           title="Quadro de Missões"
                         >
@@ -433,7 +463,7 @@ export default function Dashboard() {
                         <Button
                           variant={viewMode === "dungeon" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("dungeon")}
                           title="Mapa da Masmorra"
                         >
@@ -442,7 +472,7 @@ export default function Dashboard() {
                         <Button
                           variant={viewMode === "shop" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("shop")}
                           title="Loja de Itens"
                         >
@@ -451,7 +481,7 @@ export default function Dashboard() {
                         <Button
                           variant={(viewMode as string) === "achievements" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("achievements")}
                           title="Conquistas"
                         >
@@ -460,7 +490,7 @@ export default function Dashboard() {
                         <Button
                           variant={viewMode === "daily" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("daily")}
                           title="Desafios Diários"
                         >
@@ -469,7 +499,7 @@ export default function Dashboard() {
                         <Button
                           variant={viewMode === "monthly" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("monthly")}
                           title="Dungeon do Mês"
                         >
@@ -478,7 +508,7 @@ export default function Dashboard() {
                         <Button
                           variant={viewMode === "pets" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("pets")}
                           title="Mascotinhos"
                         >
@@ -487,7 +517,7 @@ export default function Dashboard() {
                         <Button
                           variant={viewMode === "vault" ? "secondary" : "ghost"}
                           size="icon"
-                          className="h-9 w-9"
+                          className="h-9 w-9 shrink-0"
                           onClick={() => setViewMode("vault")}
                           title="Cofre da Guilda"
                         >

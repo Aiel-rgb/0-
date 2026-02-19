@@ -1110,7 +1110,7 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
 
     // Dungeon runs for the current month
     const startsAt = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+    const endsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000); // 30 days from now
 
     const [inserted] = await db.insert(dungeons).values({
       name: "Dungeon Astral",

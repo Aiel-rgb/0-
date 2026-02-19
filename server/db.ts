@@ -590,6 +590,18 @@ export async function createGuildRaid(guildId: number, assignedByUserId: number,
   }
 }
 
+export async function updateGuildAvatar(guildId: number, avatarUrl: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.update(guilds).set({ bannerUrl: avatarUrl }).where(eq(guilds.id, guildId));
+    return true;
+  } catch (error) {
+    console.error("[Database] Failed to update guild avatar:", error);
+    return false;
+  }
+}
+
 export async function participateInGuildRaid(raidId: number, userId: number) {
   const db = await getDb();
   if (!db) return false;

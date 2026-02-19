@@ -55,7 +55,7 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
-            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-8 w-8 object-contain" />
+            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
             <span className="font-display text-xl text-primary">RP8</span>
           </div>
           <div className="flex items-center gap-4">

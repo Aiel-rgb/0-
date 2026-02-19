@@ -105,6 +105,14 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
         onError: (err) => toast.error(err.message),
     });
 
+    const uploadAvatarMutation = trpc.guild.uploadAvatar.useMutation({
+        onSuccess: () => {
+            toast.success("Imagem da guilda atualizada!");
+            refetchGuild();
+        },
+        onError: (err) => toast.error(err.message),
+    });
+
     // Auth check
     useEffect(() => {
         if (!loadingUser && !user) setLocation("/login");
@@ -134,7 +142,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                 <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                     <div className="container flex items-center justify-between py-4">
                         <div className="flex items-center gap-2">
-                            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-8 w-8 object-contain" />
+                            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
                             <span className="font-display text-xl text-primary">RP8</span>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">
@@ -153,8 +161,40 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                         <div className="absolute top-0 right-0 w-64 h-64 bg-primary/5 rounded-full blur-3xl -translate-y-1/2 translate-x-1/4" />
                         <div className="relative flex flex-col md:flex-row items-start md:items-center justify-between gap-6">
                             <div className="flex items-center gap-5">
-                                <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-purple-600/30 border-2 border-primary/30 flex items-center justify-center shadow-lg shadow-primary/10">
-                                    <Shield className="w-10 h-10 text-primary" />
+                                <div className="relative group">
+                                    <div className="w-20 h-20 rounded-2xl bg-gradient-to-br from-primary/30 to-purple-600/30 border-2 border-primary/30 flex items-center justify-center shadow-lg shadow-primary/10 overflow-hidden">
+                                        {myGuild.bannerUrl ? (
+                                            <img src={myGuild.bannerUrl} alt={myGuild.name} className="w-full h-full object-cover" />
+                                        ) : (
+                                            <Shield className="w-10 h-10 text-primary" />
+                                        )}
+                                    </div>
+                                    {isLeader && (
+                                        <div className="absolute inset-0 flex items-center justify-center bg-black/40 opacity-0 group-hover:opacity-100 transition-opacity rounded-2xl cursor-pointer"
+                                            onClick={() => {
+                                                const input = document.createElement("input");
+                                                input.type = "file";
+                                                input.accept = "image/*";
+                                                input.onchange = (e: any) => {
+                                                    const file = e.target.files?.[0];
+                                                    if (!file) return;
+                                                    const reader = new FileReader();
+                                                    reader.onload = () => {
+                                                        if (typeof reader.result === 'string') {
+                                                            uploadAvatarMutation.mutate({
+                                                                guildId: myGuild.id,
+                                                                imageData: reader.result,
+                                                                fileName: file.name
+                                                            });
+                                                        }
+                                                    };
+                                                    reader.readAsDataURL(file);
+                                                };
+                                                input.click();
+                                            }}>
+                                            <Plus className="w-6 h-6 text-white" />
+                                        </div>
+                                    )}
                                 </div>
                                 <div>
                                     <h1 className="text-3xl md:text-4xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">
@@ -286,7 +326,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
             <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                 <div className="container flex items-center justify-between py-4">
                     <div className="flex items-center gap-2">
-                        <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-8 w-8 object-contain" />
+                        <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
                         <span className="font-display text-xl text-primary">RP8</span>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">

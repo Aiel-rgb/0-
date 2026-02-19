@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -503,6 +503,42 @@ export const appRouter = router({
         const success = await leaveGuild(input.guildId, ctx.user.id);
         if (!success) throw new Error("Erro ao sair da guilda.");
         return { success };
+      }),
+
+    uploadAvatar: protectedProcedure
+      .input(z.object({
+        guildId: z.number(),
+        imageData: z.string(),
+        fileName: z.string()
+      }))
+      .mutation(async ({ ctx, input }) => {
+        try {
+          const members = await getGuildMembers(input.guildId);
+          const requester = members.find(m => m.userId === ctx.user.id);
+          if (!requester || requester.role !== 'leader') {
+            throw new Error("Somente o líder pode alterar a imagem da guilda.");
+          }
+
+          const matches = input.imageData.match(/^data:([A-Za-z-+\\/]+);base64,(.+)$/);
+          if (!matches || matches.length !== 3) throw new Error("String base64 inválida");
+          const buffer = Buffer.from(matches[2], 'base64');
+
+          const uploadsDir = path.join(process.cwd(), 'uploads');
+          if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
+
+          const ext = path.extname(input.fileName) || ".png";
+          const newFileName = `guild-${input.guildId}-${Date.now()}${ext}`;
+          const filePath = path.join(uploadsDir, newFileName);
+
+          fs.writeFileSync(filePath, buffer);
+
+          const publicUrl = `/uploads/${newFileName}`;
+          await updateGuildAvatar(input.guildId, publicUrl);
+          return { success: true, url: publicUrl };
+        } catch (e: any) {
+          console.error("GuildRouter: Upload failed", e);
+          throw new Error(e.message || "Falha ao enviar imagem");
+        }
       }),
 
     members: protectedProcedure

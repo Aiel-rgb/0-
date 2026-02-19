@@ -20,6 +20,10 @@ export function ReleaseNotes({ lastSeenVersion, onClose }: ReleaseNotesProps) {
         if (lastSeenVersion !== CURRENT_VERSION) {
             setOpen(true);
         }
+
+        const handleOpen = () => setOpen(true);
+        window.addEventListener("open-release-notes", handleOpen);
+        return () => window.removeEventListener("open-release-notes", handleOpen);
     }, [lastSeenVersion]);
 
     const handleClose = async () => {

@@ -48,7 +48,7 @@ export default function Register() {
             <div className="w-full max-w-md">
                 {/* Logo */}
                 <div className="flex items-center justify-center gap-2 mb-8">
-                    <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="h-10 w-10 object-contain" />
+                    <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
                     <span className="font-display text-2xl text-primary">RP8</span>
                 </div>
 

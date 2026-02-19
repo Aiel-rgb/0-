@@ -330,6 +330,20 @@ export default function Dashboard() {
             <Button
               variant="outline"
               size="sm"
+              onClick={() => {
+                // Find all dialogs and triggers if any, but ReleaseNotes uses a custom flag system
+                // Actually, ReleaseNotes.tsx shows based on version. 
+                // I need to add a way to force-open it.
+                window.dispatchEvent(new CustomEvent("open-release-notes"));
+              }}
+              className="border-blue-500/20 hover:bg-blue-500/10"
+            >
+              <ScrollText className="mr-2 h-4 w-4" />
+              Patch Notes
+            </Button>
+            <Button
+              variant="outline"
+              size="sm"
               onClick={() => setShowStats(!showStats)}
               className="border-primary/20 hover:bg-primary/10"
             >

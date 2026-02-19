@@ -1172,21 +1172,23 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
       .limit(1);
 
     if (existing.length > 0) {
-      // Fix: If active dungeon endsAt doesn't match the current month's end, correct it.
+      // Fix: Ensure active dungeon endsAt is approximately 30 days from *now* if the user requested it,
+      // or at least ensure it doesn't show a low value like "10 days" if it's meant to be a monthly challenge.
       const dungeon = existing[0];
-      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+      const thirtyDaysFromNow = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
-      // Use a 10-second tolerance for the check
-      if (Math.abs(dungeon.endsAt.getTime() - lastDayOfMonth.getTime()) > 10000) {
-        console.log(`[Dungeon] Correcting active dungeon duration. Old: ${dungeon.endsAt}, New: ${lastDayOfMonth}`);
-        await db.update(dungeons).set({ endsAt: lastDayOfMonth }).where(eq(dungeons.id, dungeon.id));
+      // If current endsAt is less than 25 days away, push it to 30 days from now to satisfy "1 month" request
+      const diffDays = (dungeon.endsAt.getTime() - now.getTime()) / (1000 * 60 * 60 * 24);
+      if (diffDays < 25) {
+        console.log(`[Dungeon] Rolling duration: Updating endsAt to 30 days from now. Old: ${dungeon.endsAt}, New: ${thirtyDaysFromNow}`);
+        await db.update(dungeons).set({ endsAt: thirtyDaysFromNow }).where(eq(dungeons.id, dungeon.id));
       }
       return;
     }
 
-    // Dungeon runs for the current calendar month
+    // Dungeon runs for 30 days from now (Rolling Window)
     const startsAt = new Date(now.getFullYear(), now.getMonth(), 1);
-    const endsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59); // Last day of month
+    const endsAt = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
 
     const [inserted] = await db.insert(dungeons).values({
       name: "Dungeon Astral",

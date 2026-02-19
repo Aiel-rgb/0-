@@ -1172,13 +1172,14 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
       .limit(1);
 
     if (existing.length > 0) {
-      // Fix: If existing dungeon has less than 28 days total duration, update it to end of month
+      // Fix: If active dungeon endsAt doesn't match the current month's end, correct it.
       const dungeon = existing[0];
-      const diffDays = Math.floor((dungeon.endsAt.getTime() - dungeon.startsAt.getTime()) / (1000 * 60 * 60 * 24));
-      if (diffDays < 28) {
-        console.log("[Dungeon] Updating existing dungeon duration to 1 month");
-        const newEndsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
-        await db.update(dungeons).set({ endsAt: newEndsAt }).where(eq(dungeons.id, dungeon.id));
+      const lastDayOfMonth = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
+
+      // Use a 10-second tolerance for the check
+      if (Math.abs(dungeon.endsAt.getTime() - lastDayOfMonth.getTime()) > 10000) {
+        console.log(`[Dungeon] Correcting active dungeon duration. Old: ${dungeon.endsAt}, New: ${lastDayOfMonth}`);
+        await db.update(dungeons).set({ endsAt: lastDayOfMonth }).where(eq(dungeons.id, dungeon.id));
       }
       return;
     }

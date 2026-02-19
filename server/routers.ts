@@ -3,7 +3,7 @@ import { getSessionCookieOptions } from "./_core/cookies";
 import { systemRouter } from "./_core/systemRouter";
 import { publicProcedure, router, protectedProcedure } from "./_core/trpc";
 import { z } from "zod";
-import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold } from "./db";
+import { createUserProfile, getUserProfile, getUserTasks, createTask, updateTask, deleteTask, completeTask, updateUserProgress, upsertUser, updateUserAvatar, getAllCompletions, getDb, createGuild, getGuild, getUserGuild, getAllGuilds, joinGuild, leaveGuild, getGuildMembers, createGuildRaid, completeGuildRaid, participateInGuildRaid, getGuildRaids, registerUser, loginUser, sendFriendRequest, acceptFriendRequest, rejectOrRemoveFriend, getFriends, getFriendRequests, getGuildByInviteCode, generateInviteCode, getActiveDailyTasks, getUserDailyCompletions, completeDailyTask, seedDailyTasksIfEmpty, searchUsers, getActiveDungeon, getDungeonMissions, getUserDungeonProgress, completeDungeonMission, seedAstralDungeonIfEmpty, getUnlockedThemes, equipTheme, updateLastSeenVersion, getUserByOpenId, updateGuildAvatar, getUserInventory, addToUserInventory, useUserInventoryItem, getUserCosmetics, buyUserCosmetic, equipUserCosmetic, updateUserGold, getUserPets, grantUserPet, activateUserPet, donateToGuild, buyGuildUpgrade, getGuildUpgrades } from "./db";
 import { sdk } from "./_core/sdk";
 import { ONE_YEAR_MS } from "@shared/const";
 import fs from "fs";
@@ -748,6 +748,59 @@ export const appRouter = router({
       .mutation(async ({ ctx, input }) => {
         const success = await equipUserCosmetic(ctx.user.id, input.cosmeticId, input.category);
         if (!success) throw new Error("Erro ao equipar cosmético");
+        return { success };
+      }),
+  }),
+
+  // Pets router
+  pets: router({
+    list: protectedProcedure.query(async ({ ctx }) => {
+      return await getUserPets(ctx.user.id);
+    }),
+    activate: protectedProcedure
+      .input(z.object({ petId: z.string().nullable() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await activateUserPet(ctx.user.id, input.petId);
+        if (!success) throw new Error("Erro ao ativar pet");
+        return { success };
+      }),
+    grant: protectedProcedure
+      .input(z.object({ petId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        // Simple grant for now, could be used for rewards
+        const success = await grantUserPet(ctx.user.id, input.petId);
+        if (!success) throw new Error("Erro ao conceder pet ou pet já obtido");
+        return { success };
+      }),
+  }),
+
+  // Guild Vault router
+  vault: router({
+    getInfo: protectedProcedure.query(async ({ ctx }) => {
+      const userGuild = await getUserGuild(ctx.user.id);
+      if (!userGuild) return null;
+      const upgrades = await getGuildUpgrades(userGuild.id);
+      return {
+        vaultGold: userGuild.vaultGold,
+        upgrades
+      };
+    }),
+    donate: protectedProcedure
+      .input(z.object({ amount: z.number().positive() }))
+      .mutation(async ({ ctx, input }) => {
+        const success = await donateToGuild(ctx.user.id, input.amount);
+        if (!success) throw new Error("Erro ao doar ouro (saldo insuficiente ou sem guilda)");
+        return { success };
+      }),
+    buyUpgrade: protectedProcedure
+      .input(z.object({ upgradeId: z.string() }))
+      .mutation(async ({ ctx, input }) => {
+        const userGuild = await getUserGuild(ctx.user.id);
+        if (!userGuild || userGuild.memberRole !== "leader") {
+          throw new Error("Apenas o líder pode comprar melhorias");
+        }
+        const success = await buyGuildUpgrade(ctx.user.id, userGuild.id, input.upgradeId);
+        if (!success) throw new Error("Erro ao comprar melhoria (ouro insuficiente ou erro interno)");
         return { success };
       }),
   }),

@@ -80,6 +80,23 @@ export type UserCosmetic = typeof userCosmetics.$inferSelect;
 export type InsertUserCosmetic = typeof userCosmetics.$inferInsert;
 
 /**
+ * User pets/companions
+ */
+export const userPets = mysqlTable("userPets", {
+  id: int("id").autoincrement().primaryKey(),
+  userId: int("userId").notNull(),
+  petId: varchar("petId", { length: 64 }).notNull(),
+  level: int("level").default(1).notNull(),
+  experience: int("experience").default(0).notNull(),
+  isActive: int("isActive").default(0).notNull(), // 0 = inactive, 1 = active
+  capturedAt: timestamp("capturedAt").defaultNow().notNull(),
+  updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
+});
+
+export type UserPet = typeof userPets.$inferSelect;
+export type InsertUserPet = typeof userPets.$inferInsert;
+
+/**
  * Tasks/Habits created by users
  */
 export const tasks = mysqlTable("tasks", {
@@ -122,11 +139,13 @@ export type InsertTaskCompletion = typeof taskCompletions.$inferInsert;
  */
 export const guilds = mysqlTable("guilds", {
   id: int("id").autoincrement().primaryKey(),
-  name: varchar("name", { length: 100 }).notNull().unique(),
+  name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
-  bannerUrl: text("bannerUrl"),
-  inviteCode: varchar("inviteCode", { length: 12 }).unique(),
   leaderId: int("leaderId").notNull(),
+  bannerUrl: text("bannerUrl"),
+  avatarUrl: text("avatarUrl"),
+  vaultGold: int("vaultGold").default(0).notNull(),
+  inviteCode: varchar("inviteCode", { length: 16 }).unique(),
   totalXp: int("totalXp").default(0).notNull(),
   totalRaidsCompleted: int("totalRaidsCompleted").default(0).notNull(),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
@@ -135,6 +154,18 @@ export const guilds = mysqlTable("guilds", {
 
 export type Guild = typeof guilds.$inferSelect;
 export type InsertGuild = typeof guilds.$inferInsert;
+
+export const guildUpgrades = mysqlTable("guildUpgrades", {
+  id: int("id").autoincrement().primaryKey(),
+  guildId: int("guildId").notNull(),
+  upgradeId: varchar("upgradeId", { length: 64 }).notNull(),
+  level: int("level").default(1).notNull(),
+  expiresAt: timestamp("expiresAt"),
+  purchasedAt: timestamp("purchasedAt").defaultNow().notNull(),
+});
+
+export type GuildUpgrade = typeof guildUpgrades.$inferSelect;
+export type InsertGuildUpgrade = typeof guildUpgrades.$inferInsert;
 
 /**
  * Guild members (N:N users <-> guilds)

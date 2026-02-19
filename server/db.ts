@@ -1,7 +1,7 @@
 import { eq, and, sql, desc, or, ne } from "drizzle-orm";
 import { drizzle } from "drizzle-orm/mysql2";
 import mysql from "mysql2/promise";
-import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes, userInventory, userCosmetics } from "../drizzle/schema";
+import { InsertUser, users, userProfiles, tasks, taskCompletions, guilds, guildMembers, guildRaids, friendships, guildRaidParticipants, dailyTasks, dailyTaskCompletions, dungeons, dungeonMissions, dungeonProgress, userThemes, userInventory, userCosmetics, userPets, guildUpgrades } from "../drizzle/schema";
 import crypto from "crypto";
 import { ENV } from './_core/env';
 
@@ -145,10 +145,41 @@ export async function updateUserProgress(userId: number, xpGain: number): Promis
     const profile = await getUserProfile(userId);
     if (!profile) return;
 
+    // Pet XP Bonus Logic
+    let multiplier = 1.0;
+    try {
+      const activePets = await db.select().from(userPets).where(and(eq(userPets.userId, userId), eq(userPets.isActive, 1))).limit(1);
+      if (activePets.length > 0) {
+        const pet = activePets[0];
+        if (pet.petId === "slime-blue") multiplier = 1.05;
+        else if (pet.petId === "fox-fire") multiplier = 1.10;
+        else if (pet.petId === "dragon-void") multiplier = 1.15;
+        else if (pet.petId === "phoenix-gold") multiplier = 1.20;
+      }
+    } catch (e) {
+      console.warn("[XP] Failed to apply pet bonus:", e);
+    }
+
+    const boostedXp = Math.floor(xpGain * multiplier);
+
+    // Guild XP Bonus Logic
+    let finalXp = boostedXp;
+    try {
+      const userRole = await getUserGuild(userId);
+      if (userRole) {
+        const gUpgrades = await getGuildUpgrades(userRole.id);
+        if (gUpgrades.some(u => u.upgradeId === "banner-xp")) {
+          finalXp = Math.floor(finalXp * 1.20);
+        }
+      }
+    } catch (e) {
+      console.warn("[XP] Failed to apply guild bonus:", e);
+    }
+
     // xp logic
-    let newTotalXp = profile.totalXp + xpGain;
+    let newTotalXp = profile.totalXp + finalXp;
     let newLevel = profile.currentLevel;
-    let newXpInLevel = profile.xpInCurrentLevel + xpGain;
+    let newXpInLevel = profile.xpInCurrentLevel + finalXp;
     let xpNeeded = profile.xpNeededForNextLevel;
 
     while (newXpInLevel >= xpNeeded) {
@@ -247,7 +278,7 @@ export async function getUserTasks(userId: number) {
     .from(taskCompletions)
     .where(and(
       eq(taskCompletions.userId, userId),
-      sql`${taskCompletions.completedAt} >= ${today}`
+      sql`${taskCompletions.completedAt} >= ${today} `
     ));
 
   const completedTaskIds = new Set(completions.map(c => c.taskId));
@@ -270,7 +301,7 @@ export async function getUserTasks(userId: number) {
       try {
         const days = JSON.parse(task.repeatDays as string);
         if (Array.isArray(days) && !days.includes(currentDayIndex)) {
-          // console.log(`[TaskDebug] Task ${task.id} filtered: wrong day (Task days: ${days}, Today: ${currentDayIndex})`);
+          // console.log(`[TaskDebug] Task ${ task.id } filtered: wrong day(Task days: ${ days }, Today: ${ currentDayIndex })`);
           return false;
         }
       } catch (e) {
@@ -281,7 +312,7 @@ export async function getUserTasks(userId: number) {
 
     // 3. One-time task check (if completed previously, don't show, unless completed TODAY)
     if (task.repeatType === 'none' && task.isOneTimeCompleted && !completedTaskIds.has(task.id)) {
-      // console.log(`[TaskDebug] Task ${task.id} filtered: one-time completed`);
+      // console.log(`[TaskDebug] Task ${ task.id } filtered: one - time completed`);
       return false;
     }
 
@@ -362,7 +393,7 @@ export async function completeTask(taskId: number, userId: number, xpGained: num
       .where(and(
         eq(taskCompletions.taskId, taskId),
         eq(taskCompletions.userId, userId),
-        sql`${taskCompletions.completedAt} >= ${today}`
+        sql`${taskCompletions.completedAt} >= ${today} `
       ))
       .limit(1);
 
@@ -384,6 +415,7 @@ export async function completeTask(taskId: number, userId: number, xpGained: num
 
     // Update user XP & Streak
     await updateUserProgress(userId, xpGained);
+    await addExperienceToActivePet(userId, xpGained);
     return true;
   } catch (error) {
     console.error("[Database] Failed to complete task:", error);
@@ -644,7 +676,7 @@ export async function completeGuildRaid(raidId: number, guildId: number) {
 
     // Add XP to guild and increment raids completed
     await db.update(guilds).set({
-      totalXp: sql`${guilds.totalXp} + ${raid[0].xpReward}`,
+      totalXp: sql`${guilds.totalXp} + ${raid[0].xpReward} `,
       totalRaidsCompleted: sql`${guilds.totalRaidsCompleted} + 1`,
     }).where(eq(guilds.id, guildId));
 
@@ -680,7 +712,7 @@ export async function checkGuildRaidStatus(guildId: number) {
         for (const member of members) {
           await updateUserHp(member.userId, -25);
         }
-        console.log(`[Guild] Raid ${raid.id} failed due to timeout. Penalty applied.`);
+        console.log(`[Guild] Raid ${raid.id} failed due to timeout.Penalty applied.`);
       }
     }
   } catch (error) {
@@ -730,7 +762,7 @@ function hashPassword(password: string): Promise<string> {
     const salt = crypto.randomBytes(16).toString("hex");
     crypto.scrypt(password, salt, 64, (err, derivedKey) => {
       if (err) reject(err);
-      resolve(`${salt}:${derivedKey.toString("hex")}`);
+      resolve(`${salt}:${derivedKey.toString("hex")} `);
     });
   });
 }
@@ -754,7 +786,7 @@ export async function registerUser(name: string, email: string, password: string
     if (existing.length > 0) return null; // email taken
 
     const passwordHashed = await hashPassword(password);
-    const openId = `local-${crypto.randomBytes(16).toString("hex")}`;
+    const openId = `local - ${crypto.randomBytes(16).toString("hex")} `;
 
     await db.insert(users).values({
       openId,
@@ -944,7 +976,7 @@ export async function searchUsers(query: string, excludeUserId: number) {
       .from(users)
       .leftJoin(userProfiles, eq(users.id, userProfiles.userId))
       .where(and(
-        sql`LOWER(${users.name}) LIKE ${`%${query.toLowerCase()}%`}`,
+        sql`LOWER(${users.name}) LIKE ${`%${query.toLowerCase()}%`} `,
         ne(users.id, excludeUserId),
         ne(users.role, "admin"),
       ))
@@ -1061,6 +1093,7 @@ export async function completeDailyTask(userId: number, dailyTaskId: number): Pr
     // Grant XP and Gold
     await updateUserProgress(userId, task.xpReward);
     await updateUserGold(userId, task.goldReward);
+    await addExperienceToActivePet(userId, task.xpReward);
 
     return { success: true, alreadyDone: false, xpReward: task.xpReward, goldReward: task.goldReward };
   } catch (e) {
@@ -1116,7 +1149,7 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
       .from(dungeons)
       .where(and(
         eq(dungeons.active, 1),
-        sql`${dungeons.endsAt} >= ${now}`
+        sql`${dungeons.endsAt} >= ${now} `
       ))
       .limit(1);
 
@@ -1157,8 +1190,8 @@ export async function getActiveDungeon() {
       .from(dungeons)
       .where(and(
         eq(dungeons.active, 1),
-        sql`${dungeons.startsAt} <= ${now}`,
-        sql`${dungeons.endsAt} >= ${now}`,
+        sql`${dungeons.startsAt} <= ${now} `,
+        sql`${dungeons.endsAt} >= ${now} `,
       ))
       .limit(1);
     return result.length > 0 ? result[0] : null;
@@ -1227,6 +1260,7 @@ export async function completeDungeonMission(
     // Grant XP and Gold
     await updateUserProgress(userId, mission.xpReward);
     await updateUserGold(userId, mission.goldReward);
+    await addExperienceToActivePet(userId, mission.xpReward);
 
     // Check if all missions completed → unlock theme
     const allMissions = await getDungeonMissions(dungeonId);
@@ -1317,7 +1351,19 @@ export async function updateUserGold(userId: number, goldChange: number) {
   try {
     const profile = await getUserProfile(userId);
     if (!profile) return false;
-    const newGold = Math.max(0, profile.gold + goldChange);
+
+    let finalChange = goldChange;
+    if (goldChange > 0) {
+      const userRole = await getUserGuild(userId);
+      if (userRole) {
+        const gUpgrades = await getGuildUpgrades(userRole.id);
+        if (gUpgrades.some(u => u.upgradeId === "chalice-gold")) {
+          finalChange = Math.floor(finalChange * 1.15);
+        }
+      }
+    }
+
+    const newGold = Math.max(0, profile.gold + finalChange);
     await db.update(userProfiles).set({ gold: newGold }).where(eq(userProfiles.userId, userId));
     return true;
   } catch (e) {
@@ -1473,5 +1519,242 @@ export async function equipUserCosmetic(userId: number, cosmeticId: string, cate
   } catch (e) {
     console.error("[Cosmetics] Failed to equip cosmetic:", e);
     return false;
+  }
+}
+
+// ── Pets System ────────────────────────────────────────
+
+export const PET_DEFS: Record<string, {
+  name: string;
+  description: string;
+  bonus: string;
+  icon: string;
+  rarity: 'common' | 'rare' | 'epic' | 'legendary';
+}> = {
+  "slime-blue": {
+    name: "Slime Azul",
+    description: "Um pequeno companheiro gelatinoso e amigável.",
+    bonus: "+5% XP em tarefas",
+    icon: "💧",
+    rarity: 'common'
+  },
+  "fox-fire": {
+    name: "Raposa de Fogo",
+    description: "Uma raposa mística que emana calor e determinação.",
+    bonus: "+10% XP em tarefas de Foco",
+    icon: "🦊",
+    rarity: 'rare'
+  },
+  "dragon-void": {
+    name: "Dragão do Vácuo",
+    description: "Um dragão ancestral que distorce a realidade.",
+    bonus: "+15% XP em todas as missões",
+    icon: "🐲",
+    rarity: 'epic'
+  },
+  "phoenix-gold": {
+    name: "Fênix Dourada",
+    description: "Uma ave lendária que renasce das cinzas do fracasso.",
+    bonus: "Proteção de Streak + Reset de HP 1x/semana",
+    icon: "🐦",
+    rarity: 'legendary'
+  }
+};
+
+export async function getUserPets(userId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(userPets).where(eq(userPets.userId, userId));
+  } catch (e) {
+    console.error("[Pets] Failed to get pets:", e);
+    return [];
+  }
+}
+
+export async function grantUserPet(userId: number, petId: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const existing = await db
+      .select()
+      .from(userPets)
+      .where(and(eq(userPets.userId, userId), eq(userPets.petId, petId)))
+      .limit(1);
+
+    if (existing.length > 0) return false; // Already has it
+
+    await db.insert(userPets).values({ userId, petId, level: 1, experience: 0, isActive: 0 });
+    return true;
+  } catch (e) {
+    console.error("[Pets] Failed to grant pet:", e);
+    return false;
+  }
+}
+
+export async function activateUserPet(userId: number, petId: string | null) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    await db.transaction(async (tx) => {
+      // Deactivate all
+      await tx.update(userPets).set({ isActive: 0 }).where(eq(userPets.userId, userId));
+
+      if (petId) {
+        // Activate specific one
+        await tx
+          .update(userPets)
+          .set({ isActive: 1 })
+          .where(and(eq(userPets.userId, userId), eq(userPets.petId, petId)));
+      }
+    });
+    return true;
+  } catch (e) {
+    console.error("[Pets] Failed to activate pet:", e);
+    return false;
+  }
+}
+
+export async function addExperienceToActivePet(userId: number, amount: number) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const activePet = await db
+      .select()
+      .from(userPets)
+      .where(and(eq(userPets.userId, userId), eq(userPets.isActive, 1)))
+      .limit(1);
+
+    if (activePet.length === 0) return false;
+
+    const pet = activePet[0];
+    let newExp = pet.experience + amount;
+    let newLevel = pet.level;
+
+    // Simple level up logic: level * 100 XP
+    const expNeeded = newLevel * 100;
+    if (newExp >= expNeeded) {
+      newExp -= expNeeded;
+      newLevel += 1;
+    }
+
+    await db
+      .update(userPets)
+      .set({ level: newLevel, experience: newExp })
+      .where(eq(userPets.id, pet.id));
+
+    return true;
+  } catch (e) {
+    console.error("[Pets] Failed to add experience to pet:", e);
+    return false;
+  }
+}
+
+// ── Guild Vault System ─────────────────────────────────
+
+export const GUILD_UPGRADE_DEFS: Record<string, {
+  name: string;
+  description: string;
+  bonus: string;
+  price: number;
+  durationHours: number;
+  icon: string;
+}> = {
+  "banner-xp": {
+    name: "Estandarte de Batalha",
+    description: "Um estandarte imponente que inspira todos os membros.",
+    bonus: "+20% XP global",
+    price: 1000,
+    durationHours: 24,
+    icon: "🚩"
+  },
+  "chalice-gold": {
+    name: "Cálice da Prosperidade",
+    description: "Um cálice sagrado que atrai riquezas para a guilda.",
+    bonus: "+15% Ouro global",
+    price: 1500,
+    durationHours: 48,
+    icon: "🏆"
+  },
+  "shield-protection": {
+    name: "Escudo do Guardião",
+    description: "Protege os membros de danos críticos.",
+    bonus: "-50% Dano de Missões Expiradas",
+    price: 2000,
+    durationHours: 72,
+    icon: "🛡️"
+  }
+};
+
+export async function donateToGuild(userId: number, goldAmount: number) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const userRole = await getUserGuild(userId);
+    if (!userRole) return false;
+
+    const profile = await getUserProfile(userId);
+    if (!profile || profile.gold < goldAmount) return false;
+
+    await db.transaction(async (tx) => {
+      // Deduct from user
+      await tx.update(userProfiles).set({ gold: profile.gold - goldAmount }).where(eq(userProfiles.userId, userId));
+      // Add to guild vault
+      await tx
+        .update(guilds)
+        .set({ vaultGold: sql`${guilds.vaultGold} + ${goldAmount}` })
+        .where(eq(guilds.id, userRole.id));
+    });
+    return true;
+  } catch (e) {
+    console.error("[Vault] Failed to donate:", e);
+    return false;
+  }
+}
+
+export async function buyGuildUpgrade(leaderId: number, guildId: number, upgradeId: string) {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    const guild = await getGuild(guildId);
+    if (!guild || guild.leaderId !== leaderId) return false;
+
+    const def = GUILD_UPGRADE_DEFS[upgradeId];
+    if (!def || guild.vaultGold < def.price) return false;
+
+    const expiresAt = new Date();
+    expiresAt.setHours(expiresAt.getHours() + def.durationHours);
+
+    await db.transaction(async (tx) => {
+      // Deduct from vault
+      await tx.update(guilds).set({ vaultGold: guild.vaultGold - def.price }).where(eq(guilds.id, guildId));
+
+      // Upsert upgrade
+      const existing = await tx.select().from(guildUpgrades).where(and(eq(guildUpgrades.guildId, guildId), eq(guildUpgrades.upgradeId, upgradeId))).limit(1);
+
+      if (existing.length > 0) {
+        // If still active, extend. If expired, reset.
+        const currentEnd = existing[0].expiresAt ? new Date(existing[0].expiresAt).getTime() : 0;
+        const newEnd = Math.max(Date.now(), currentEnd) + (def.durationHours * 60 * 60 * 1000);
+        await tx.update(guildUpgrades).set({ expiresAt: new Date(newEnd) }).where(eq(guildUpgrades.id, existing[0].id));
+      } else {
+        await tx.insert(guildUpgrades).values({ guildId, upgradeId, expiresAt, level: 1 });
+      }
+    });
+    return true;
+  } catch (e) {
+    console.error("[Vault] Failed to buy upgrade:", e);
+    return false;
+  }
+}
+
+export async function getGuildUpgrades(guildId: number) {
+  const db = await getDb();
+  if (!db) return [];
+  try {
+    return await db.select().from(guildUpgrades).where(and(eq(guildUpgrades.guildId, guildId), sql`expiresAt > NOW()`));
+  } catch (e) {
+    console.error("[Vault] Failed to get upgrades:", e);
+    return [];
   }
 }

@@ -8,8 +8,6 @@ export interface VersionNote {
     date: string;
 }
 
-export const CURRENT_VERSION = "2.0.1";
-
 export const PATCH_NOTES: VersionNote[] = [
     {
         version: "2.0.1",

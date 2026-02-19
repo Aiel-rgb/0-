@@ -158,14 +158,14 @@ export async function updateUserProgress(userId: number, xpGain: number): Promis
 
     // streak logic
     const now = new Date();
-    // Normalize to local date string or just use UTC for simplicity?
-    // Using UTC days is safer for consistency.
+    // Use UTC for consistency
     const today = new Date(Date.UTC(now.getFullYear(), now.getMonth(), now.getDate()));
+
     let newStreak = profile.streak;
     let newLastUpdate = profile.lastStreakUpdate;
 
     if (!profile.lastStreakUpdate) {
-      // First task ever
+      // First activity ever
       newStreak = 1;
       newLastUpdate = now;
     } else {
@@ -180,7 +180,7 @@ export async function updateUserProgress(userId: number, xpGain: number): Promis
         newStreak += 1;
         newLastUpdate = now;
       } else if (diffDays > 1) {
-        // Missed one or more days
+        // Missed one or more days - RESET
         newStreak = 1;
         newLastUpdate = now;
       }
@@ -197,6 +197,17 @@ export async function updateUserProgress(userId: number, xpGain: number): Promis
     }).where(eq(userProfiles.userId, userId));
   } catch (error) {
     console.error("[Database] Failed to update user progress:", error);
+  }
+}
+
+export async function resetAllStreaks() {
+  const db = await getDb();
+  if (!db) return;
+  try {
+    await db.update(userProfiles).set({ streak: 0, lastStreakUpdate: null });
+    console.log("[Database] All streaks reset to 0.");
+  } catch (error) {
+    console.error("[Database] Failed to reset streaks:", error);
   }
 }
 
@@ -1084,11 +1095,20 @@ export async function seedAstralDungeonIfEmpty(): Promise<void> {
   const db = await getDb();
   if (!db) return;
   try {
-    const existing = await db.select({ id: dungeons.id }).from(dungeons).limit(1);
+    // Check for ACTIVE dungeon in CURRENT month
+    const now = new Date();
+    const existing = await db
+      .select({ id: dungeons.id })
+      .from(dungeons)
+      .where(and(
+        eq(dungeons.active, 1),
+        sql`${dungeons.endsAt} >= ${now}`
+      ))
+      .limit(1);
+
     if (existing.length > 0) return;
 
     // Dungeon runs for the current month
-    const now = new Date();
     const startsAt = new Date(now.getFullYear(), now.getMonth(), 1);
     const endsAt = new Date(now.getFullYear(), now.getMonth() + 1, 0, 23, 59, 59);
 

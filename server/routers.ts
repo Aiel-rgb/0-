@@ -19,7 +19,15 @@ export const appRouter = router({
       if (!opts.ctx.user) return null;
       try {
         const freshUser = await getUserByOpenId(opts.ctx.user.openId);
-        return freshUser || opts.ctx.user;
+        if (freshUser) {
+          // Trigger streak update (0 XP) just for visiting
+          // We don't await this to avoid blocking the response
+          updateUserProgress(freshUser.id, 0).catch(err =>
+            console.error("[Auth] Failed to update streak on visit:", err)
+          );
+          return freshUser;
+        }
+        return opts.ctx.user;
       } catch (e) {
         return opts.ctx.user;
       }

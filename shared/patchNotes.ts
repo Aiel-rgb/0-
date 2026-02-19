@@ -11,15 +11,18 @@ export interface VersionNote {
 export const PATCH_NOTES: VersionNote[] = [
     {
         version: "2.0.1",
-        title: "Personalização & Hábitos",
-        description: "Agora você pode personalizar seu avatar com upload de fotos e criar hábitos recorrentes para sua rotina.",
+        title: "RP8: O Renascimento",
+        description: "Bem-vindo ao RP8! Uma nova identidade com correções críticas e melhorias de qualidade de vida.",
         highlights: [
-            "📸 Upload de Avatar: Use sua própria foto no perfil com zoom e corte.",
-            "🔄 Tarefas Recorrentes: Crie hábitos diários ou semanais.",
-            "🐛 Correção no Upload: Fotos agora atualizam instantaneamente.",
-            "🛠️ Melhorias de Estabilidade: Ajustes no sistema de missões."
+            "✨ Rebranding Completo: Peak Habit agora é RP8. Nova identidade, mesmo propósito.",
+            "🔥 Reset de Streaks: Um novo começo para todos os guerreiros (correção na contagem de dias).",
+            "📸 Avatar Persistente: Upload de fotos corrigido e bug de desaparecimento resolvido.",
+            "⚔️ Dungeon Mensal Ajustada: 10 Andares desafiadores com duração correta de 1 mês.",
+            "🔄 Tarefas Recorrentes: Crie hábitos diários ou semanais com flexibilidade.",
+            "📊 Ranking da Guilda: Movido para a página da Guilda para melhor organização.",
+            "🐛 Correções Diversas: Estabilidade do servidor e melhorias visuais."
         ],
-        date: "2025-02-25"
+        date: "2025-02-19"
     },
     {
         version: "2.0.0",

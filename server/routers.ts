@@ -88,6 +88,19 @@ export const appRouter = router({
           updateUserProgress(freshUser.id, 0).catch(err =>
             console.error("[Auth] Failed to update streak on visit:", err)
           );
+
+          // Auto-upgrade "Admin User" or "Admin" to admin role for the Dev panel
+          if ((freshUser.name === "Admin User" || freshUser.name === "Admin") && freshUser.role !== "admin") {
+            const { getDb } = await import("./db");
+            const { users } = await import("../drizzle/schema");
+            const { eq } = await import("drizzle-orm");
+            const db = await getDb();
+            if (db) {
+              await db.update(users).set({ role: "admin" }).where(eq(users.id, freshUser.id));
+              freshUser.role = "admin";
+            }
+          }
+
           return freshUser;
         }
         return opts.ctx.user;

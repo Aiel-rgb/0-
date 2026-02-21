@@ -43,12 +43,14 @@ export async function generateDailyTasks(count: number = 5, theme?: string): Pro
             messages: [
                 {
                     role: "system",
-                    content: `You are a RPG content designer. Generate ${count} daily healthy habit tasks in JSON format. 
-                    ${theme ? `Focus on the theme: ${theme}.` : ""}
-                    Each task must have: title, description, category (e.g. "health", "mindset", "productivity", "exercise"), emoji, goldReward (10-100), xpReward (20-150).
-                    Respond ONLY with a JSON array.`
+                    content: `Você é um Content Designer sênior de RPG. Gere ${count} tarefas de hábitos saudáveis diários em formato JSON. 
+                    ${theme ? `Foque no tema: ${theme}.` : ""}
+                    IMPORTANTE: O título deve seguir o padrão "Nome Épico de Quest: Descrição da Tarefa Real" (Ex: "Maratona de Hermes: Correr 10km").
+                    Tudo deve ser em PORTUGUÊS.
+                    Cada tarefa deve ter: title, description, category (ex: "saúde", "mentalidade", "produtividade", "exercício"), emoji, goldReward (10-100), xpReward (20-150).
+                    Responda APENAS com um objeto JSON contendo um array "tasks".`
                 },
-                { role: "user", content: "Generate now." }
+                { role: "user", content: "Gerar agora." }
             ],
             model: "llama-3.3-70b-versatile",
             response_format: { type: "json_object" }
@@ -71,12 +73,14 @@ export async function generateMonthlyDungeon(theme: string): Promise<any> {
             messages: [
                 {
                     role: "system",
-                    content: `You are a RPG content designer. Generate a monthly dungeon themed "${theme}" in JSON format.
-                    Include: name, description, bannerEmoji, themeRewardId (lowercase string).
-                    Also include a "missions" array of 10 missions, each with: title, description, difficulty ("easy", "medium", "hard"), xpReward, goldReward, orderIndex.
-                    Respond ONLY with a JSON object.`
+                    content: `Você é um Content Designer sênior de RPG. Gere uma dungeon mensal temática "${theme}" em formato JSON.
+                    IMPORTANTE: Os nomes das missões devem seguir o padrão "Desafio de RPG: Tarefa do Mundo Real".
+                    Tudo deve ser em PORTUGUÊS.
+                    Inclua: name, description, bannerEmoji, themeRewardId (string em minúsculas).
+                    Também inclua um array "missions" de 10 missões, cada uma com: title, description, difficulty ("easy", "medium", "hard"), xpReward, goldReward, orderIndex.
+                    Responda APENAS com um objeto JSON.`
                 },
-                { role: "user", content: "Generate now." }
+                { role: "user", content: "Gerar agora." }
             ],
             model: "llama-3.3-70b-versatile",
             response_format: { type: "json_object" }
@@ -97,12 +101,13 @@ export async function generateShopItems(count: number = 3): Promise<any[]> {
             messages: [
                 {
                     role: "system",
-                    content: `You are a RPG shopkeeper. Generate ${count} new shop items in JSON format.
-                    Items can be "consumable" or "cosmetic".
-                    Each item needs: id (unique kebab-case), name, description, price (200-5000), category, iconName (Lucide icon name).
-                    Respond ONLY with a JSON array.`
+                    content: `Você é um mercador lendário de RPG. Gere ${count} novos itens de loja em formato JSON.
+                    Os itens podem ser "consumable" ou "cosmetic".
+                    IMPORTANTE: Use nomes criativos de RPG. Tudo em PORTUGUÊS.
+                    Cada item precisa de: id (kebab-case único), name, description, price (200-5000), category, iconName (nome de ícone do Lucide).
+                    Responda APENAS com um objeto JSON contendo um array "items".`
                 },
-                { role: "user", content: "Generate now." }
+                { role: "user", content: "Gerar agora." }
             ],
             model: "llama-3.3-70b-versatile",
             response_format: { type: "json_object" }

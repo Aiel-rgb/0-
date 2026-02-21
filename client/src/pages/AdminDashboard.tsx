@@ -4,7 +4,10 @@ import { Tabs, TabsList, TabsTrigger, TabsContent } from "@/components/ui/tabs";
 import { Input } from "@/components/ui/input";
 import { trpc } from "@/lib/trpc";
 import { useUser } from "@/lib/useUser";
-import { Loader2, Plus, Check, Trash2, Sparkles, Package, Map, ListTodo } from "lucide-react";
+import {
+    ListTodo, Map, Package, Sparkles, Loader2, CheckCircle2,
+    Trash2, Gavel, Plus, RefreshCw, Trophy, Coins, Zap, Check
+} from "lucide-react";
 import { toast } from "sonner";
 import { useState } from "react";
 import { cn } from "@/lib/utils";
@@ -44,9 +47,21 @@ export default function AdminDashboard() {
 
     const deleteMutation = trpc.admin.delete.useMutation({
         onSuccess: () => {
-            toast.success("Conteúdo removido");
+            toast.success("Conteúdo excluído");
             utils.admin.listDrafts.invalidate();
         },
+    });
+
+    const approveAllMutation = trpc.admin.approveAll.useMutation({
+        onSuccess: () => {
+            toast.success("Todos os itens aprovados!");
+            utils.admin.listDrafts.invalidate();
+        },
+        onError: (err) => {
+            toast.error("Erro ao aprovar todos", {
+                description: err.message
+            });
+        }
     });
 
     const giveMoneyMutation = trpc.admin.giveMoney.useMutation({
@@ -84,25 +99,44 @@ export default function AdminDashboard() {
                     <h1 className="text-3xl font-display font-bold tracking-tight">Painel de Curadoria</h1>
                     <p className="text-muted-foreground text-lg">Revise e aprove conteúdos gerados por IA.</p>
                 </div>
-                <div className="flex flex-col md:flex-row gap-3 items-end">
-                    <div className="space-y-1.5 flex-1">
-                        <label className="text-sm font-medium text-muted-foreground ml-1">Tema / Contexto para o Groq</label>
+                <div className="flex flex-col md:flex-row gap-4 items-end bg-card/50 p-4 rounded-xl border border-border/50">
+                    <div className="flex-1 w-full">
+                        <label className="text-xs font-bold text-muted-foreground mb-1.5 block uppercase tracking-wider">
+                            Tema / Contexto Supremo para o Groq
+                        </label>
                         <Input
-                            placeholder="Ex: Fantasia Medieval, Hábitos de Guerreiro, Itens Lendários..."
+                            placeholder="Ex: Mitologia Grega, Cyberpunk, Hábitos de Guerreiro Espartano..."
                             value={theme}
                             onChange={(e) => setTheme(e.target.value)}
-                            className="bg-secondary/30 border-primary/10 focus:border-primary/30 w-full md:w-80"
+                            className="bg-background/50 border-primary/20 focus:border-primary/50"
                         />
                     </div>
-                    <Button
-                        variant="default"
-                        onClick={() => handleGenerate("tasks", theme)}
-                        disabled={generating === "tasks"}
-                        className="bg-primary/20 hover:bg-primary/30 text-primary border border-primary/30 font-bold"
-                    >
-                        {generating === "tasks" ? <Loader2 className="mr-2 h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
-                        Gerar 5 Tarefas
-                    </Button>
+                    <div className="flex gap-2 w-full md:w-auto">
+                        <Button
+                            onClick={() => generateMutation.mutate({ type: "tasks", theme })}
+                            disabled={!!generating}
+                            className="flex-1 md:flex-none bg-emerald-600 hover:bg-emerald-700 text-white font-bold"
+                        >
+                            {generating === "tasks" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Sparkles className="mr-2 h-4 w-4" />}
+                            Gerar 5 Tarefas
+                        </Button>
+                        <Button
+                            onClick={() => generateMutation.mutate({ type: "dungeon", theme })}
+                            disabled={!!generating || !theme}
+                            className="flex-1 md:flex-none bg-indigo-600 hover:bg-indigo-700 text-white font-bold"
+                        >
+                            {generating === "dungeon" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Map className="mr-2 h-4 w-4" />}
+                            Gerar Dungeon
+                        </Button>
+                        <Button
+                            onClick={() => generateMutation.mutate({ type: "items", theme })}
+                            disabled={!!generating}
+                            className="flex-1 md:flex-none bg-amber-600 hover:bg-amber-700 text-white font-bold"
+                        >
+                            {generating === "items" ? <Loader2 className="h-4 w-4 animate-spin" /> : <Package className="mr-2 h-4 w-4" />}
+                            Gerar 3 Itens
+                        </Button>
+                    </div>
                 </div>
             </header>
 
@@ -127,6 +161,23 @@ export default function AdminDashboard() {
                 </TabsList>
 
                 <TabsContent value="tasks" className="space-y-4">
+                    <div className="flex items-center justify-between mb-4">
+                        <h3 className="text-lg font-bold flex items-center gap-2">
+                            <ListTodo className="h-5 w-5 text-emerald-500" />
+                            Tarefas em Rascunho
+                        </h3>
+                        {(drafts?.tasks.length ?? 0) > 0 && (
+                            <Button
+                                variant="outline"
+                                size="sm"
+                                onClick={() => approveAllMutation.mutate({ type: "task" })}
+                                disabled={approveAllMutation.isPending}
+                                className="border-emerald-500/50 text-emerald-500 hover:bg-emerald-500/10"
+                            >
+                                <CheckCircle2 className="mr-2 h-4 w-4" /> Aprovar Todas
+                            </Button>
+                        )}
+                    </div>
                     <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-3">
                         {drafts?.tasks.map((task: any) => (
                             <Card key={task.id} className="relative overflow-hidden group border-border/50 bg-secondary/20 hover:bg-secondary/30 transition-all">

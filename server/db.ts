@@ -1916,6 +1916,22 @@ export async function adminApproveContent(type: "task" | "dungeon" | "mission" |
   }
 }
 
+export async function adminApproveAll(type: "task" | "item") {
+  const db = await getDb();
+  if (!db) return false;
+  try {
+    if (type === "task") {
+      await db.update(dailyTasks).set({ status: "active", active: 1, isPool: 1 }).where(eq(dailyTasks.status, "draft"));
+    } else if (type === "item") {
+      await db.update(shopItems).set({ status: "active" }).where(eq(shopItems.status, "draft"));
+    }
+    return true;
+  } catch (e) {
+    console.error(`[Admin] Failed to approve all ${type}s:`, e);
+    return false;
+  }
+}
+
 export async function adminDeleteContent(type: "task" | "dungeon" | "mission" | "item", id: number | string) {
   const db = await getDb();
   if (!db) return false;

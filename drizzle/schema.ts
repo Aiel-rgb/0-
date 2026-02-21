@@ -339,6 +339,10 @@ export const shopItems = mysqlTable("shopItems", {
   category: mysqlEnum("category", ["consumable", "cosmetic"]).notNull(),
   iconName: varchar("iconName", { length: 64 }).notNull(), // Lucide icon name or emoji
   status: mysqlEnum("status", ["draft", "active", "deleted"]).default("active").notNull(),
+  hpEffect: int("hpEffect").default(0).notNull(),
+  xpEffect: int("xpEffect").default(0).notNull(),
+  goldEffect: int("goldEffect").default(0).notNull(),
+  effectDescription: text("effectDescription"),
   createdAt: timestamp("createdAt").defaultNow().notNull(),
   updatedAt: timestamp("updatedAt").defaultNow().onUpdateNow().notNull(),
 });

@@ -104,7 +104,17 @@ export async function generateShopItems(count: number = 3): Promise<any[]> {
                     content: `Você é um mercador lendário de RPG. Gere ${count} novos itens de loja em formato JSON.
                     Os itens podem ser "consumable" ou "cosmetic".
                     IMPORTANTE: Use nomes criativos de RPG. Tudo em PORTUGUÊS.
-                    Cada item precisa de: id (kebab-case único), name, description, price (200-5000), category, iconName (nome de ícone do Lucide).
+                    Cada item precisa de: 
+                    - id (kebab-case único)
+                    - name (Nome Épico)
+                    - description (Descrição lore/temática)
+                    - price (200-5000)
+                    - category ("consumable" ou "cosmetic")
+                    - iconName (nome de ícone do Lucide, como "heart", "zap", "star", "shield")
+                    - hpEffect (0-100, apenas para consumables)
+                    - xpEffect (0-500, apenas para consumables)
+                    - goldEffect (0-1000, apenas para consumables)
+                    - effectDescription (Ex: "Restaura 30 de Vida", "Ganha 100 de XP")
                     Responda APENAS com um objeto JSON contendo um array "items".`
                 },
                 { role: "user", content: "Gerar agora." }

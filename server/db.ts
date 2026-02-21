@@ -1500,15 +1500,30 @@ export async function useUserInventoryItem(userId: number, itemId: string) {
     }
 
     // Apply Effects
-    if (itemId === "scroll-gold") {
-      await updateUserGold(userId, 200);
-    } else if (itemId === "potion-heal") {
-      const profile = await getUserProfile(userId);
-      if (profile) {
-        const newHp = Math.min(100, profile.hp + 30);
-        await db.update(userProfiles).set({ hp: newHp }).where(eq(userProfiles.userId, userId));
+    const itemDetails = await db.select().from(shopItems).where(eq(shopItems.id, itemId)).limit(1);
+    if (itemDetails.length > 0) {
+      const item = itemDetails[0];
+
+      // Apply HP Effect
+      if (item.hpEffect > 0) {
+        const profile = await getUserProfile(userId);
+        if (profile) {
+          const newHp = Math.min(100, profile.hp + item.hpEffect);
+          await db.update(userProfiles).set({ hp: newHp }).where(eq(userProfiles.userId, userId));
+        }
+      }
+
+      // Apply XP Effect
+      if (item.xpEffect > 0) {
+        await updateUserProgress(userId, item.xpEffect);
+      }
+
+      // Apply Gold Effect
+      if (item.goldEffect > 0) {
+        await updateUserGold(userId, item.goldEffect);
       }
     }
+
     return true;
   } catch (e) {
     console.error("[Inventory] Failed to use item:", e);

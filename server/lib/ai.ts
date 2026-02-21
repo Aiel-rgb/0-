@@ -74,9 +74,11 @@ export async function generateMonthlyDungeon(theme: string): Promise<any> {
                 {
                     role: "system",
                     content: `Você é um Content Designer sênior de RPG. Gere uma dungeon mensal temática "${theme}" em formato JSON.
+                    Explore temas variados como Cyberpunk, Mitologia Grega, Dark Fantasy, Steampunk ou exploração espacial, dependendo do que foi pedido.
                     IMPORTANTE: Os nomes das missões devem seguir o padrão "Desafio de RPG: Tarefa do Mundo Real".
+                    Os nomes e descrições devem ser imersivos e condizentes com o tema escolhido.
                     Tudo deve ser em PORTUGUÊS.
-                    Inclua: name, description, bannerEmoji, themeRewardId (string em minúsculas).
+                    Inclua: name, description, bannerEmoji, themeRewardId (string em minúsculas baseada no tema, ex: "cyberpunk-frame", "neon-skin").
                     Também inclua um array "missions" de 10 missões, cada uma com: title, description, difficulty ("easy", "medium", "hard"), xpReward, goldReward, orderIndex.
                     Responda APENAS com um objeto JSON.`
                 },

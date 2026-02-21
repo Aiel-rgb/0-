@@ -1904,17 +1904,29 @@ export async function adminApproveContent(type: "task" | "dungeon" | "mission" |
       // Mark as pool task so it rotates daily
       await db.update(dailyTasks).set({ status: "active", active: 1, isPool: 1 }).where(eq(dailyTasks.id, id as number));
     } else if (type === "dungeon") {
-      // Deactivate other dungeons first to ensure only one is active
-      await db.update(dungeons).set({ active: 0 }).where(eq(dungeons.status, "active"));
+      // Find the latest endsAt among all active/scheduled dungeons
+      const latestDungeon = await db
+        .select({ endsAt: dungeons.endsAt })
+        .from(dungeons)
+        .where(and(eq(dungeons.status, "active"), eq(dungeons.active, 1)))
+        .orderBy(desc(dungeons.endsAt))
+        .limit(1);
 
       const now = new Date();
-      const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+      let startsAt = now;
+
+      // If there's a dungeon active/scheduled in the future, start after it
+      if (latestDungeon.length > 0 && latestDungeon[0].endsAt > now) {
+        startsAt = latestDungeon[0].endsAt;
+      }
+
+      const endsAt = new Date(startsAt.getTime() + 30 * 24 * 60 * 60 * 1000);
 
       await db.update(dungeons).set({
         status: "active",
         active: 1,
-        startsAt: now,
-        endsAt: nextMonth
+        startsAt: startsAt,
+        endsAt: endsAt
       }).where(eq(dungeons.id, id as number));
 
       // Also activate its missions

@@ -1238,7 +1238,8 @@ export async function getActiveDungeon() {
   if (!db) return null;
   try {
     const now = new Date();
-    const result = await db
+    // Try to find a dungeon that is currently active and within its date range
+    let result = await db
       .select()
       .from(dungeons)
       .where(and(
@@ -1248,6 +1249,21 @@ export async function getActiveDungeon() {
         gte(dungeons.endsAt, now),
       ))
       .limit(1);
+
+    // Fallback: If no dungeon is strictly in range, pick the most recent active one
+    // this ensures "rotation" works even if there's a slight gap in production dates
+    if (result.length === 0) {
+      result = await db
+        .select()
+        .from(dungeons)
+        .where(and(
+          eq(dungeons.active, 1),
+          eq(dungeons.status, "active")
+        ))
+        .orderBy(sql`${dungeons.startsAt} DESC`)
+        .limit(1);
+    }
+
     return result.length > 0 ? result[0] : null;
   } catch (e) {
     console.warn("[Dungeon] Failed to get active dungeon:", e);
@@ -1870,9 +1886,24 @@ export async function adminApproveContent(type: "task" | "dungeon" | "mission" |
   if (!db) return false;
   try {
     if (type === "task") {
-      await db.update(dailyTasks).set({ status: "active", active: 1 }).where(eq(dailyTasks.id, id as number));
+      // Mark as pool task so it rotates daily
+      await db.update(dailyTasks).set({ status: "active", active: 1, isPool: 1 }).where(eq(dailyTasks.id, id as number));
     } else if (type === "dungeon") {
-      await db.update(dungeons).set({ status: "active", active: 1 }).where(eq(dungeons.id, id as number));
+      // Deactivate other dungeons first to ensure only one is active
+      await db.update(dungeons).set({ active: 0 }).where(eq(dungeons.status, "active"));
+
+      const now = new Date();
+      const nextMonth = new Date(now.getTime() + 30 * 24 * 60 * 60 * 1000);
+
+      await db.update(dungeons).set({
+        status: "active",
+        active: 1,
+        startsAt: now,
+        endsAt: nextMonth
+      }).where(eq(dungeons.id, id as number));
+
+      // Also activate its missions
+      await db.update(dungeonMissions).set({ status: "active" }).where(eq(dungeonMissions.dungeonId, id as number));
     } else if (type === "mission") {
       await db.update(dungeonMissions).set({ status: "active" }).where(eq(dungeonMissions.id, id as number));
     } else if (type === "item") {

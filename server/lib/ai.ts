@@ -35,7 +35,9 @@ export async function generateEpicQuestName(taskTitle: string): Promise<string> 
     }
 }
 export async function generateDailyTasks(count: number = 5, theme?: string): Promise<any[]> {
-    if (!process.env.GROQ_API_KEY) return [];
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY não está configurada nas Variáveis de Ambiente.");
+    }
     try {
         const completion = await groq.chat.completions.create({
             messages: [
@@ -54,14 +56,16 @@ export async function generateDailyTasks(count: number = 5, theme?: string): Pro
         const content = completion.choices[0]?.message?.content || "{\"tasks\": []}";
         const parsed = JSON.parse(content);
         return Array.isArray(parsed) ? parsed : (parsed.tasks || []);
-    } catch (error) {
+    } catch (error: any) {
         console.error("AI: Failed to generate tasks:", error);
-        return [];
+        throw new Error(`Erro na API da IA: ${error.message || "Falha desconhecida"}`);
     }
 }
 
 export async function generateMonthlyDungeon(theme: string): Promise<any> {
-    if (!process.env.GROQ_API_KEY) return null;
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY não está configurada nas Variáveis de Ambiente.");
+    }
     try {
         const completion = await groq.chat.completions.create({
             messages: [
@@ -78,14 +82,16 @@ export async function generateMonthlyDungeon(theme: string): Promise<any> {
             response_format: { type: "json_object" }
         });
         return JSON.parse(completion.choices[0]?.message?.content || "null");
-    } catch (error) {
+    } catch (error: any) {
         console.error("AI: Failed to generate dungeon:", error);
-        return null;
+        throw new Error(`Erro na API da IA: ${error.message || "Falha desconhecida"}`);
     }
 }
 
 export async function generateShopItems(count: number = 3): Promise<any[]> {
-    if (!process.env.GROQ_API_KEY) return [];
+    if (!process.env.GROQ_API_KEY) {
+        throw new Error("GROQ_API_KEY não está configurada nas Variáveis de Ambiente.");
+    }
     try {
         const completion = await groq.chat.completions.create({
             messages: [
@@ -104,8 +110,8 @@ export async function generateShopItems(count: number = 3): Promise<any[]> {
         const content = completion.choices[0]?.message?.content || "{\"items\": []}";
         const parsed = JSON.parse(content);
         return Array.isArray(parsed) ? parsed : (parsed.items || []);
-    } catch (error) {
+    } catch (error: any) {
         console.error("AI: Failed to generate shop items:", error);
-        return [];
+        throw new Error(`Erro na API da IA: ${error.message || "Falha desconhecida"}`);
     }
 }

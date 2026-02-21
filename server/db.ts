@@ -1982,7 +1982,18 @@ export async function adminDeleteContent(type: "task" | "dungeon" | "mission" | 
 export async function adminCreateDailyTaskDraft(task: any) {
   const db = await getDb();
   if (!db) return null;
-  const [inserted] = await db.insert(dailyTasks).values({ ...task, status: "draft", active: 0 });
+  // Explicitly pick fields to avoid passing an 'id' string from AI to an int PK
+  const [inserted] = await db.insert(dailyTasks).values({
+    title: task.title,
+    description: task.description,
+    emoji: task.emoji || "✅",
+    xpReward: Number(task.xpReward) || 50,
+    goldReward: Number(task.goldReward) || 25,
+    category: task.category || "health",
+    status: "draft",
+    active: 0,
+    isPool: 1
+  });
   return (inserted as any).insertId;
 }
 
@@ -2008,9 +2019,9 @@ export async function adminCreateDungeonDraft(dungeon: any, missions: any[]) {
         title: m.title,
         description: m.description,
         difficulty: m.difficulty,
-        xpReward: m.xpReward,
-        goldReward: m.goldReward,
-        orderIndex: m.orderIndex,
+        xpReward: Number(m.xpReward) || 100,
+        goldReward: Number(m.goldReward) || 50,
+        orderIndex: Number(m.orderIndex) || 0,
         status: "draft" as "draft" | "active" | "deleted"
       })));
     }
@@ -2021,6 +2032,22 @@ export async function adminCreateDungeonDraft(dungeon: any, missions: any[]) {
 export async function adminCreateShopItemDraft(item: any) {
   const db = await getDb();
   if (!db) return null;
-  await db.insert(shopItems).values({ ...item, status: "draft" });
-  return item.id;
+
+  // Add a small random suffix to avoid identity collisions for drafts
+  const draftId = `${item.id}-${Math.floor(Math.random() * 1000)}`;
+
+  await db.insert(shopItems).values({
+    id: draftId,
+    name: item.name,
+    description: item.description,
+    price: Number(item.price) || 500,
+    category: item.category as "consumable" | "cosmetic",
+    iconName: item.iconName || "package",
+    status: "draft",
+    hpEffect: Number(item.hpEffect) || 0,
+    xpEffect: Number(item.xpEffect) || 0,
+    goldEffect: Number(item.goldEffect) || 0,
+    effectDescription: item.effectDescription
+  });
+  return draftId;
 }

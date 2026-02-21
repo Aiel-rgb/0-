@@ -59,7 +59,7 @@ export default function Home() {
       <nav className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
         <div className="container flex items-center justify-between py-4">
           <div className="flex items-center gap-2">
-            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-16 h-16 md:w-28 md:h-28 object-contain" />
+            <img src="/assets/icons/rp8-logo.png" alt="RP8 Logo" className="w-16 h-16 md:w-28 md:h-28 object-contain" />
             <span className="font-display text-xl text-primary">RP8</span>
           </div>
 
@@ -180,9 +180,9 @@ export default function Home() {
           </div>
           <div className="relative h-96 md:h-full">
             <img
-              src="https://private-us-east-1.manuscdn.com/sessionFile/RP75638VsA3MZVf8CFy7bG/sandbox/rncAgsJQsvX04yJDm8jIxE-img-1_1770676679000_na1fn_aGVyby1tb3VudGFpbg.png?x-oss-process=image/resize,w_1920,h_1920/format,webp/quality,q_80&Expires=1798761600&Policy=eyJTdGF0ZW1lbnQiOlt7IlJlc291cmNlIjoiaHR0cHM6Ly9wcml2YXRlLXVzLWVhc3QtMS5tYW51c2Nkbi5jb20vc2Vzc2lvbkZpbGUvUlA3NTYzOFZzQTNNWlZmOENGeTdiRy9zYW5kYm94L3JuY0Fnc0pRc3ZYMDR5SkRtOGpJeEUtaW1nLTFfMTc3MDY3NjY3OTAwMF9uYTFmbl9hR1Z5YnkxdGIzVnVkR0ZwYmcucG5nP3gtb3NzLXByb2Nlc3M9aW1hZ2UvcmVzaXplLHdfMTkyMCxoXzE5MjAvZm9ybWF0LHdlYnAvcXVhbGl0eSxxXzgwIiwiQ29uZGl0aW9uIjp7IkRhdGVMZXNzVGhhbiI6eyJBV1M6RXBvY2hUaW1lIjoxNzk4NzYxNjAwfX19XX0_&Key-Pair-Id=K2HSFNDJXOU9YS&Signature=olfCPbBA496S0TT6DJ3Ae1ROHrGRXOwCsUh84Xi~-d3OHcX531mgWPM28C7Y4JgJrOn~dl~9ySHf65K4CYl1U7HGHwwBL822gaav1eoJdCUX6zIHBQfp6nZrqc3MUQigx9QgHA5psktG0KnF9oC-7~FXkZoK2Xs8Z9HvHnc4JTqqr3VJ0eTyfYjE9H7Dqyluuu4DuR3BvF0ZpKYami5VjFyRALH23FwKPN6G79GZGAp2GQtgpFWs62nltzP3N~EJQKYe6a4CVuMeXwsKz7p0PnMtSzh9-tKcBXaT0xBWMbtQAifk628DqYZmlNoftAEe-99cn~7MHsR6bnUQpmvP3Q__"
-              alt="Mountain Peak"
-              className="w-full h-full object-cover rounded-lg"
+              src="/assets/icons/rp8-logo.png"
+              alt="RP8 Logo Entrance"
+              className="w-full h-full object-contain rounded-lg"
             />
           </div>
         </div>

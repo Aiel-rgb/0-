@@ -142,7 +142,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
                 <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                     <div className="container flex items-center justify-between py-4">
                         <div className="flex items-center gap-2">
-                            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-16 h-16 md:w-28 md:h-28 object-contain" />
+                            <img src="/assets/icons/rp8-logo.png" alt="RP8 Logo" className="w-16 h-16 md:w-28 md:h-28 object-contain" />
                             <span className="font-display text-xl text-primary">RP8</span>
                         </div>
                         <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">
@@ -326,7 +326,7 @@ export default function GuildPage({ inviteCode }: { inviteCode?: string }) {
             <header className="sticky top-0 z-50 border-b border-border bg-background/80 backdrop-blur-md">
                 <div className="container flex items-center justify-between py-4">
                     <div className="flex items-center gap-2">
-                        <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-28 h-28 object-contain" />
+                        <img src="/assets/icons/rp8-logo.png" alt="RP8 Logo" className="w-28 h-28 object-contain" />
                         <span className="font-display text-xl text-primary">RP8</span>
                     </div>
                     <Button variant="ghost" size="sm" onClick={() => setLocation("/dashboard")} className="flex items-center gap-2">

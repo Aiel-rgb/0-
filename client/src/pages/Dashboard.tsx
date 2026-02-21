@@ -327,7 +327,7 @@ export default function Dashboard() {
         {/* Header Section */}
         <header className="flex flex-row justify-between items-center gap-4 animate-in fade-in slide-in-from-top-4 duration-700 bg-card/30 backdrop-blur-sm p-4 rounded-2xl border border-border/40">
           <div className="flex items-center gap-4">
-            <img src="/assets/icons/icone.svg" alt="RP8 Logo" className="w-12 h-12 object-contain" />
+            <img src="/assets/icons/rp8-logo.png" alt="RP8 Logo" className="w-12 h-12 object-contain" />
             <div>
               <h1 className="text-xl md:text-2xl font-display font-bold text-transparent bg-clip-text bg-gradient-to-r from-primary to-purple-400">
                 {myGuild?.name || "RP8"}

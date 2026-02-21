@@ -1,4 +1,4 @@
-import { int, mysqlEnum, mysqlTable, text, timestamp, varchar } from "drizzle-orm/mysql-core";
+import { int, mysqlEnum, mysqlTable, text, mediumtext, timestamp, varchar } from "drizzle-orm/mysql-core";
 
 /**
  * Core user table backing auth flow.
@@ -13,7 +13,7 @@ export const users = mysqlTable("users", {
   id: int("id").autoincrement().primaryKey(),
   /** Manus OAuth identifier (openId) returned from the OAuth callback. Unique per user. */
   openId: varchar("openId", { length: 64 }).notNull().unique(),
-  avatarUrl: text("avatarUrl"),
+  avatarUrl: mediumtext("avatarUrl"),
   name: text("name"),
   email: varchar("email", { length: 320 }),
   passwordHash: varchar("passwordHash", { length: 256 }),
@@ -142,8 +142,8 @@ export const guilds = mysqlTable("guilds", {
   name: varchar("name", { length: 255 }).notNull(),
   description: text("description"),
   leaderId: int("leaderId").notNull(),
-  bannerUrl: text("bannerUrl"),
-  avatarUrl: text("avatarUrl"),
+  bannerUrl: mediumtext("bannerUrl"),
+  avatarUrl: mediumtext("avatarUrl"),
   vaultGold: int("vaultGold").default(0).notNull(),
   inviteCode: varchar("inviteCode", { length: 16 }).unique(),
   totalXp: int("totalXp").default(0).notNull(),

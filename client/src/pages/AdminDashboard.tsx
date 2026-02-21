@@ -49,6 +49,22 @@ export default function AdminDashboard() {
         },
     });
 
+    const giveMoneyMutation = trpc.admin.giveMoney.useMutation({
+        onSuccess: () => {
+            toast.success("Ouro Infinito Adicionado!");
+            utils.profile.getProfile.invalidate();
+            // Re-fetch gold in local storage listener by triggering event (optional, but good)
+            window.dispatchEvent(new Event("gold-changed"));
+        }
+    });
+
+    const setLevel99Mutation = trpc.admin.setLevel99.useMutation({
+        onSuccess: () => {
+            toast.success("Level 99 Alcançado!");
+            utils.profile.getProfile.invalidate();
+        }
+    });
+
     if (user?.role !== "admin") {
         return (
             <div className="flex h-[80vh] items-center justify-center">
@@ -91,7 +107,7 @@ export default function AdminDashboard() {
             </header>
 
             <Tabs defaultValue="tasks" className="w-full">
-                <TabsList className="grid w-full grid-cols-3 md:w-auto mb-6 bg-secondary/50 p-1">
+                <TabsList className="grid w-full grid-cols-4 md:w-auto mb-6 bg-secondary/50 p-1">
                     <TabsTrigger value="tasks" className="flex gap-2">
                         <ListTodo className="h-4 w-4" />
                         Tarefas Diárias ({drafts?.tasks.length ?? 0})
@@ -103,6 +119,10 @@ export default function AdminDashboard() {
                     <TabsTrigger value="shop" className="flex gap-2">
                         <Package className="h-4 w-4" />
                         Loja ({drafts?.items.length ?? 0})
+                    </TabsTrigger>
+                    <TabsTrigger value="dev" className="flex gap-2">
+                        <Sparkles className="h-4 w-4 text-amber-500" />
+                        Painel DEV
                     </TabsTrigger>
                 </TabsList>
 
@@ -241,6 +261,36 @@ export default function AdminDashboard() {
                             </Card>
                         ))}
                     </div>
+                </TabsContent>
+
+                <TabsContent value="dev" className="space-y-6">
+                    <Card className="border-border/50 bg-secondary/20 p-6">
+                        <CardHeader className="px-0 pt-0">
+                            <CardTitle className="text-2xl text-amber-500 flex items-center gap-2">
+                                <Sparkles className="h-6 w-6" />
+                                God Mode Options
+                            </CardTitle>
+                            <CardDescription>
+                                Comandos de administrador para facilitar o teste das mecânicas do jogo.
+                            </CardDescription>
+                        </CardHeader>
+                        <CardContent className="px-0 flex flex-col sm:flex-row gap-4">
+                            <Button
+                                onClick={() => giveMoneyMutation.mutate()}
+                                disabled={giveMoneyMutation.isPending}
+                                className="bg-amber-500 hover:bg-amber-600 text-black font-bold"
+                            >
+                                Ganhar Dinheiro Infinito
+                            </Button>
+                            <Button
+                                onClick={() => setLevel99Mutation.mutate()}
+                                disabled={setLevel99Mutation.isPending}
+                                className="bg-purple-500 hover:bg-purple-600 text-white font-bold"
+                            >
+                                Level 99 Instantâneo
+                            </Button>
+                        </CardContent>
+                    </Card>
                 </TabsContent>
             </Tabs>
         </div>

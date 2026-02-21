@@ -49,6 +49,32 @@ export const appRouter = router({
         }
         return { success: true };
       }),
+    giveMoney: adminProcedure
+      .mutation(async ({ ctx }) => {
+        const { getDb } = await import("./db");
+        const { userProfiles } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (db) {
+          await db.update(userProfiles).set({ gold: 999999 }).where(eq(userProfiles.userId, ctx.user.id));
+        }
+        return { success: true };
+      }),
+    setLevel99: adminProcedure
+      .mutation(async ({ ctx }) => {
+        const { getDb } = await import("./db");
+        const { userProfiles } = await import("../drizzle/schema");
+        const { eq } = await import("drizzle-orm");
+        const db = await getDb();
+        if (db) {
+          await db.update(userProfiles).set({
+            currentLevel: 99,
+            xpNeededForNextLevel: Math.floor(100 * (1.1 ** 98)),
+            xpInCurrentLevel: 0
+          }).where(eq(userProfiles.userId, ctx.user.id));
+        }
+        return { success: true };
+      }),
   }),
   auth: router({
     me: publicProcedure.query(async (opts) => {
@@ -218,27 +244,8 @@ export const appRouter = router({
       }))
       .mutation(async ({ ctx, input }) => {
         try {
-          // Decode base64
-          const matches = input.imageData.match(/^data:([A-Za-z-+\/]+);base64,(.+)$/);
-          if (!matches || matches.length !== 3) {
-            throw new Error("Invalid base64 string");
-          }
-          const buffer = Buffer.from(matches[2], 'base64');
-
-          // Ensure directory exists
-          const uploadsDir = path.join(process.cwd(), 'uploads');
-          if (!fs.existsSync(uploadsDir)) {
-            fs.mkdirSync(uploadsDir, { recursive: true });
-          }
-
-          const ext = path.extname(input.fileName) || ".png";
-          const newFileName = `avatar-${ctx.user.id}-${Date.now()}${ext}`;
-          const filePath = path.join(uploadsDir, newFileName);
-
-          fs.writeFileSync(filePath, buffer);
-
-          const publicUrl = `/uploads/${newFileName}`;
-          console.log("ProfileRouter: Uploaded avatar to", publicUrl);
+          const publicUrl = input.imageData;
+          console.log("ProfileRouter: Saved base64 avatar");
 
           const success = await updateUserAvatar(ctx.user.id, publicUrl, ctx.user.openId);
           return { success, url: publicUrl };
@@ -558,20 +565,7 @@ export const appRouter = router({
             throw new Error("Somente o líder pode alterar a imagem da guilda.");
           }
 
-          const matches = input.imageData.match(/^data:([A-Za-z-+\\/]+);base64,(.+)$/);
-          if (!matches || matches.length !== 3) throw new Error("String base64 inválida");
-          const buffer = Buffer.from(matches[2], 'base64');
-
-          const uploadsDir = path.join(process.cwd(), 'uploads');
-          if (!fs.existsSync(uploadsDir)) fs.mkdirSync(uploadsDir, { recursive: true });
-
-          const ext = path.extname(input.fileName) || ".png";
-          const newFileName = `guild-${input.guildId}-${Date.now()}${ext}`;
-          const filePath = path.join(uploadsDir, newFileName);
-
-          fs.writeFileSync(filePath, buffer);
-
-          const publicUrl = `/uploads/${newFileName}`;
+          const publicUrl = input.imageData;
           await updateGuildAvatar(input.guildId, publicUrl);
           return { success: true, url: publicUrl };
         } catch (e: any) {
